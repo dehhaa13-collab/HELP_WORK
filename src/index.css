@@ -11,9 +11,9 @@
   --color-bg: #F7F7F9;
   --color-surface: #FFFFFF;
   
-  --color-primary: #2D3250;
-  --color-primary-hover: #424769;
-  --color-primary-light: #F0F1F5;
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-primary-light: #EFF6FF;
   
   --color-text: #1C1C1E;
   --color-text-secondary: #6B6B70;
@@ -32,7 +32,7 @@
   
   --color-sidebar-bg: #1C1C1E;
   --color-sidebar-text: #F7F7F9;
-  --color-sidebar-active: #424769;
+  --color-sidebar-active: #2563EB;
   --color-sidebar-hover: rgba(255, 255, 255, 0.08);
 
   /* Typography */

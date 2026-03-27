@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useToastStore } from '../../../store';
-import { fetchGrokCompletion } from '../../../utils/grokApi';
+import { fetchGeminiCompletion } from '../../../utils/geminiApi';
 import type { TrafficLightStatus } from '../../../types';
 import './AiAnalysisTab.css';
 
@@ -97,7 +97,7 @@ export function AiAnalysisTab({ clientId: _clientId }: Props) {
         }
       ];
 
-      const responseText = await fetchGrokCompletion(messages, 'grok-2-vision-1212');
+      const responseText = await fetchGeminiCompletion(messages, 'gemini-1.5-flash');
       
       const cleanJson = responseText.replace(/```(json)?/g, '').trim();
       let parsed: Record<string, unknown>;

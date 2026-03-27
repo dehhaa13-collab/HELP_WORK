@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useToastStore } from '../../../store';
-import { fetchGrokCompletion } from '../../../utils/grokApi';
+import { fetchGeminiCompletion } from '../../../utils/geminiApi';
 import './ScenariosTab.css';
 
 interface Props {
@@ -53,10 +53,10 @@ ${competitorLinks}
   ...
 ]`;
 
-      const responseText = await fetchGrokCompletion([
-        { role: 'system', content: 'Ты опытный Instagram-продюсер. Ты возвращаешь строго JSON-массив без markdown разметки и без дополнительного текста.' },
+      const responseText = await fetchGeminiCompletion([
+        { role: 'system', content: 'Ты опытный Instagram-продюсер. Строго придерживайся JSON структуры и не возвращай ничего, кроме JSON.' },
         { role: 'user', content: prompt }
-      ]);
+      ], 'gemini-1.5-flash');
       
       // Clean potential markdown blocks
       const cleanJson = responseText.replace(/```(json)?/g, '').trim();
@@ -140,10 +140,10 @@ ${selectedTitles}
   { "id": 2, "topicTitle": "Тема 2", "content": "Текст сценария в markdown..." }
 ]`;
 
-      const responseText = await fetchGrokCompletion([
-        { role: 'system', content: 'Ты креативный сценарист Reels. Возвращай строго JSON-массив без markdown блока.' },
+      const responseText = await fetchGeminiCompletion([
+        { role: 'system', content: 'Ты креативный сценарист Reels. Возвращай строго JSON-массив.' },
         { role: 'user', content: prompt }
-      ]);
+      ], 'gemini-1.5-flash');
 
       const cleanJson = responseText.replace(/```(json)?/g, '').trim();
       let generatedScripts: ScriptItem[];

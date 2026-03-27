@@ -252,10 +252,10 @@ export const useToastStore = create<ToastState>((set) => ({
     const toast: Toast = { id, type, title, message };
     set((state) => ({ toasts: [...state.toasts, toast] }));
 
-    // Автоматическое удаление через 5 секунд
+    // Автоматическое удаление через 10 секунд
     setTimeout(() => {
       set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));
-    }, 5000);
+    }, 10000);
   },
 
   removeToast: (id) => {

@@ -26,7 +26,16 @@ export const fetchGrokCompletion = async (messages: any[], model = 'grok-2-lates
   if (!response.ok) {
     const errorMsg = await response.text();
     console.error(`[Grok API] HTTP ${response.status}:`, errorMsg);
-    throw new Error(`Ошибка Grok API (HTTP ${response.status}). Подробности в консоли.`);
+    
+    let parsedErr = '';
+    try {
+      const j = JSON.parse(errorMsg);
+      parsedErr = j.error?.message || j.message || errorMsg;
+    } catch {
+      parsedErr = errorMsg;
+    }
+    
+    throw new Error(`Ошибка Grok API (HTTP ${response.status}): ${parsedErr.substring(0, 150)}`);
   }
 
   const data = await response.json();

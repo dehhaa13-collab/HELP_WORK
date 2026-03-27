@@ -367,3 +367,63 @@
     gap: var(--space-3);
   }
 }
+
+/* === Inline Name Editing === */
+.client-name-editable {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.client-name-editable .edit-icon {
+  font-size: var(--font-size-xs);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.client-card:hover .client-name-editable .edit-icon {
+  opacity: 0.5;
+}
+
+.client-name-editable:hover .edit-icon {
+  opacity: 1 !important;
+}
+
+.client-edit-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.client-edit-input {
+  width: 140px;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+/* === Stage Navigation Buttons === */
+.stage-nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.client-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* === Comment Preview === */
+.client-comment-preview {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  margin-top: var(--space-2);
+  line-height: 1.4;
+}

@@ -5,31 +5,38 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore, useClientStore, useToastStore } from '../../store';
 import { PIPELINE_STAGES } from '../../types';
-import type { Client } from '../../types';
+import type { Client, PipelineStage } from '../../types';
 import './Dashboard.css';
 
 export function Dashboard() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const { clients, addClient, removeClient, advanceStage, selectClient } = useClientStore();
+  const { clients, addClient, removeClient, advanceStage, setStage, updateClient, selectClient } = useClientStore();
   const addToast = useToastStore((s) => s.addToast);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newInstagram, setNewInstagram] = useState('');
+  const [newComment, setNewComment] = useState('');
+
+  // Inline editing
+  const [editingClientId, setEditingClientId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
 
   // Escape to close modal
   const handleEscape = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape' && showAddModal) {
-      setShowAddModal(false);
+    if (e.key === 'Escape') {
+      if (showAddModal) setShowAddModal(false);
+      if (editingClientId) setEditingClientId(null);
     }
-  }, [showAddModal]);
+  }, [showAddModal, editingClientId]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [handleEscape]);
 
+  // === Add client (with optional comment) ===
   const handleAddClient = async () => {
     if (!newName.trim()) {
       addToast('warning', 'Введите имя', 'Укажите имя клиента для добавления.');
@@ -41,10 +48,11 @@ export function Dashboard() {
     }
 
     try {
-      await addClient(newName.trim(), newInstagram.trim());
+      await addClient(newName.trim(), newInstagram.trim(), newComment.trim() || undefined);
       addToast('success', 'Клиент добавлен', `${newName.trim()} добавлен в систему.`);
       setNewName('');
       setNewInstagram('');
+      setNewComment('');
       setShowAddModal(false);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
@@ -52,6 +60,7 @@ export function Dashboard() {
     }
   };
 
+  // === Remove client ===
   const handleRemoveClient = async (client: Client) => {
     if (window.confirm(`Удалить клиента "${client.name}"? Это действие необратимо.`)) {
       try {
@@ -64,6 +73,7 @@ export function Dashboard() {
     }
   };
 
+  // === Advance stage (forward) ===
   const handleAdvanceStage = async (e: React.MouseEvent, client: Client) => {
     e.stopPropagation();
     const currentIndex = PIPELINE_STAGES.findIndex((s) => s.key === client.pipelineStage);
@@ -75,6 +85,46 @@ export function Dashboard() {
       await advanceStage(client.id);
       const nextStage = PIPELINE_STAGES[currentIndex + 1];
       addToast('success', 'Этап обновлён', `${client.name} переведён на этап «${nextStage.emoji} ${nextStage.label}».`);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      addToast('error', 'Ошибка обновления', errMsg);
+    }
+  };
+
+  // === Go back one stage ===
+  const handlePrevStage = async (e: React.MouseEvent, client: Client) => {
+    e.stopPropagation();
+    const currentIndex = PIPELINE_STAGES.findIndex((s) => s.key === client.pipelineStage);
+    if (currentIndex <= 0) {
+      addToast('info', 'Первый этап', `${client.name} уже на начальном этапе «Встреча».`);
+      return;
+    }
+    try {
+      const prevStage = PIPELINE_STAGES[currentIndex - 1];
+      await setStage(client.id, prevStage.key as PipelineStage);
+      addToast('success', 'Этап обновлён', `${client.name} возвращён на этап «${prevStage.emoji} ${prevStage.label}».`);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      addToast('error', 'Ошибка обновления', errMsg);
+    }
+  };
+
+  // === Inline name editing ===
+  const startEditName = (e: React.MouseEvent, client: Client) => {
+    e.stopPropagation();
+    setEditingClientId(client.id);
+    setEditName(client.name);
+  };
+
+  const saveEditName = async (clientId: string) => {
+    if (!editName.trim()) {
+      addToast('warning', 'Имя не может быть пустым', 'Введите имя клиента.');
+      return;
+    }
+    try {
+      await updateClient(clientId, { name: editName.trim() });
+      addToast('success', 'Имя обновлено', `Имя клиента изменено на «${editName.trim()}».`);
+      setEditingClientId(null);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
       addToast('error', 'Ошибка обновления', errMsg);
@@ -149,13 +199,15 @@ export function Dashboard() {
               const { stage, index, total } = getStageInfo(client);
               const progress = ((index + 1) / total) * 100;
               const isLastStage = index >= total - 1;
+              const isFirstStage = index <= 0;
+              const isEditing = editingClientId === client.id;
 
               return (
                 <div
                   key={client.id}
                   className="client-card card"
-                  onClick={() => selectClient(client.id)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectClient(client.id); } }}
+                  onClick={() => { if (!isEditing) selectClient(client.id); }}
+                  onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !isEditing) { e.preventDefault(); selectClient(client.id); } }}
                   role="button"
                   tabIndex={0}
                 >
@@ -166,7 +218,28 @@ export function Dashboard() {
                         {client.name.charAt(0).toUpperCase()}
                       </div>
                       <div className="client-info">
-                        <h3 className="client-name">{client.name}</h3>
+                        {isEditing ? (
+                          <div className="client-edit-name" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              className="input client-edit-input"
+                              type="text"
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveEditName(client.id); } if (e.key === 'Escape') setEditingClientId(null); }}
+                              autoFocus
+                            />
+                            <button className="btn btn-primary btn-sm" onClick={() => saveEditName(client.id)}>✓</button>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setEditingClientId(null)}>✕</button>
+                          </div>
+                        ) : (
+                          <h3
+                            className="client-name client-name-editable"
+                            onClick={(e) => startEditName(e, client)}
+                            title="Нажмите, чтобы изменить имя"
+                          >
+                            {client.name} <span className="edit-icon">✏️</span>
+                          </h3>
+                        )}
                         <span className="client-instagram">{client.instagram}</span>
                       </div>
                       <button
@@ -177,6 +250,13 @@ export function Dashboard() {
                         🗑️
                       </button>
                     </div>
+
+                    {/* Comment preview */}
+                    {client.meetingSummary && (
+                      <div className="client-comment-preview">
+                        💬 {client.meetingSummary.length > 60 ? client.meetingSummary.substring(0, 60) + '...' : client.meetingSummary}
+                      </div>
+                    )}
 
                     {/* Pipeline Progress */}
                     <div className="client-pipeline">
@@ -206,7 +286,7 @@ export function Dashboard() {
                       </div>
                     </div>
 
-                    {/* Actions */}
+                    {/* Actions — with back/forward stage buttons */}
                     <div className="client-card-actions">
                       <button
                         className="btn btn-secondary btn-sm"
@@ -214,14 +294,26 @@ export function Dashboard() {
                       >
                         Открыть
                       </button>
-                      {!isLastStage && (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={(e) => handleAdvanceStage(e, client)}
-                        >
-                          → Следующий этап
-                        </button>
-                      )}
+                      <div className="stage-nav-buttons">
+                        {!isFirstStage && (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={(e) => handlePrevStage(e, client)}
+                            title="Предыдущий этап"
+                          >
+                            ← Назад
+                          </button>
+                        )}
+                        {!isLastStage && (
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={(e) => handleAdvanceStage(e, client)}
+                            title="Следующий этап"
+                          >
+                            Далее →
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -234,7 +326,7 @@ export function Dashboard() {
       {/* Add Client Modal */}
       {showAddModal && (
         <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-          <div className="modal card" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddClient(); } }}>
+          <div className="modal card" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement)) { e.preventDefault(); handleAddClient(); } }}>
             <div className="modal-header">
               <h2>Новый клиент</h2>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowAddModal(false)}>✕</button>
@@ -261,6 +353,17 @@ export function Dashboard() {
                   placeholder="@username"
                   value={newInstagram}
                   onChange={(e) => setNewInstagram(e.target.value)}
+                />
+              </div>
+              <div className="login-field">
+                <label className="login-label" htmlFor="new-client-comment">Комментарий <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(необязательно)</span></label>
+                <textarea
+                  id="new-client-comment"
+                  className="input textarea"
+                  placeholder="Заметки после встречи, особенности клиента..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  rows={3}
                 />
               </div>
             </div>

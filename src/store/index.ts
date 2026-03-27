@@ -71,7 +71,7 @@ interface ClientState {
   selectedClientId: string | null;
   isLoading: boolean;
   selectClient: (id: string | null) => void;
-  addClient: (name: string, instagram: string) => Promise<void>;
+  addClient: (name: string, instagram: string, comment?: string) => Promise<void>;
   removeClient: (id: string) => Promise<void>;
   updateClient: (id: string, updates: Partial<Client>) => Promise<void>;
   advanceStage: (id: string) => Promise<void>;
@@ -136,15 +136,19 @@ export const useClientStore = create<ClientState>((set, get) => ({
     set({ clients, isLoading: false });
   },
 
-  addClient: async (name, instagram) => {
+  addClient: async (name, instagram, comment) => {
     const instagramFormatted = instagram.startsWith('@') ? instagram : `@${instagram}`;
+    const insertData: Record<string, unknown> = {
+      name,
+      instagram: instagramFormatted,
+      pipeline_stage: 'meeting',
+    };
+    if (comment && comment.trim()) {
+      insertData.meeting_summary = comment.trim();
+    }
     const { data, error } = await supabase
       .from('clients')
-      .insert({
-        name,
-        instagram: instagramFormatted,
-        pipeline_stage: 'meeting',
-      })
+      .insert(insertData)
       .select()
       .single();
 

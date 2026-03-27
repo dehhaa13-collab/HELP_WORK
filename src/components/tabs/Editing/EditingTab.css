@@ -1,0 +1,116 @@
+/* Editing Tab — Стили */
+
+.editing-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.editing-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.editing-progress-badge {
+  font-size: var(--font-size-base) !important;
+  font-weight: 700;
+  padding: var(--space-2) var(--space-4) !important;
+}
+
+/* Table */
+.editing-table {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.editing-table-header {
+  display: grid;
+  grid-template-columns: 50px 1fr 1fr 1fr;
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-bg);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.editing-table-row {
+  display: grid;
+  grid-template-columns: 50px 1fr 1fr 1fr;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  transition: background-color var(--transition-fast);
+  align-items: center;
+}
+
+.editing-table-row:last-child {
+  border-bottom: none;
+}
+
+.editing-table-row:hover {
+  background-color: var(--color-bg);
+}
+
+.editing-row-done {
+  background-color: var(--color-success-bg) !important;
+}
+
+.editing-num-badge {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+/* Checkbox */
+.editing-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.editing-checkbox input {
+  display: none;
+}
+
+.editing-checkbox-custom {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.editing-checkbox input:checked + .editing-checkbox-custom {
+  background-color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.editing-checkbox input:checked + .editing-checkbox-custom::after {
+  content: '✓';
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.editing-checkbox-label {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}

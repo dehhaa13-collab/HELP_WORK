@@ -1,0 +1,152 @@
+/* AI Analysis Tab — Стили */
+
+.ai-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.ai-section-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.ai-section-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+/* Upload Area */
+.ai-upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-10);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  gap: var(--space-3);
+}
+
+.ai-upload-area:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.ai-upload-icon {
+  font-size: 2rem;
+}
+
+/* Screenshot Preview */
+.ai-screenshot-preview {
+  position: relative;
+  max-width: 300px;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.ai-screenshot-preview img {
+  width: 100%;
+  display: block;
+}
+
+.ai-screenshot-remove {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  color: #FFFFFF !important;
+  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-2) !important;
+}
+
+/* Analyze Button */
+.ai-analyze-btn {
+  width: 100%;
+  margin-top: var(--space-4);
+}
+
+/* Traffic Light */
+.traffic-light-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+
+.traffic-light-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.traffic-light-item:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.traffic-light-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.traffic-light-info {
+  flex: 1;
+}
+
+.traffic-light-label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.traffic-light-status {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+.traffic-light-hint {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  position: absolute;
+  right: var(--space-3);
+}
+
+.traffic-light-item:hover .traffic-light-hint {
+  opacity: 1;
+}
+
+/* AI Summary */
+.ai-summary-text {
+  font-size: var(--font-size-sm);
+  line-height: 1.8;
+  color: var(--color-text);
+}
+
+.ai-summary-text p {
+  margin-bottom: var(--space-2);
+}
+
+.ai-summary-text p:empty {
+  display: none;
+}

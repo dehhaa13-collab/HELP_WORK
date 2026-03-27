@@ -1,0 +1,109 @@
+/* Formats Tab — Стили */
+
+.formats-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.formats-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.formats-count-btns {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* Stats */
+.formats-stats {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.formats-stat-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  background-color: var(--color-surface);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+}
+
+.formats-stat-count {
+  font-weight: 700;
+}
+
+/* Grid */
+.formats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  max-width: 420px;
+}
+
+.formats-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  background-color: var(--color-surface);
+}
+
+.formats-cell:hover {
+  transform: scale(1.03);
+  box-shadow: var(--shadow-md);
+}
+
+.formats-cell-number {
+  position: absolute;
+  top: var(--space-1);
+  left: var(--space-2);
+  font-size: 10px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.formats-cell-emoji {
+  font-size: 1.5rem;
+}
+
+.formats-cell-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.formats-cell-placeholder {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.formats-cell-empty {
+  border-style: dashed;
+  background-color: var(--color-bg);
+}
+
+.formats-cell-reels {
+  background-color: #FDF2F8;
+}
+
+.formats-cell-post {
+  background-color: var(--color-primary-light);
+}
+
+.formats-cell-carousel {
+  background-color: #F5F3FF;
+}

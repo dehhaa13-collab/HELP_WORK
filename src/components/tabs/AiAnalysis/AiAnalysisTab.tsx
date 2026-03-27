@@ -100,29 +100,49 @@ export function AiAnalysisTab({ clientId: _clientId }: Props) {
       const responseText = await fetchGrokCompletion(messages, 'grok-2-vision-1212');
       
       const cleanJson = responseText.replace(/```(json)?/g, '').trim();
-      let parsed;
+      let parsed: Record<string, unknown>;
       try {
         parsed = JSON.parse(cleanJson);
       } catch (e) {
-        console.error("Grok JSON parse error: ", responseText);
-        throw new Error("Invalid output format from Grok");
+        console.error("[AI-анализ] Grok вернул не-JSON:", responseText);
+        throw new Error("ИИ вернул ответ в неверном формате (не JSON). Проверьте консоль.");
+      }
+
+      // Строгая валидация — никаких фейковых данных
+      const validStatuses = ['red', 'yellow', 'green'];
+      const missingFields: string[] = [];
+
+      if (!validStatuses.includes(parsed.avatar as string)) missingFields.push('avatar');
+      if (!validStatuses.includes(parsed.bio as string)) missingFields.push('bio');
+      if (!validStatuses.includes(parsed.highlights as string)) missingFields.push('highlights');
+      if (!validStatuses.includes(parsed.feed as string)) missingFields.push('feed');
+      
+      if (missingFields.length > 0) {
+        console.error("[AI-анализ] ИИ не дал оценки для:", missingFields, "Ответ:", parsed);
+        throw new Error(`ИИ не дал оценки для: ${missingFields.join(', ')}. Попробуйте ещё раз.`);
+      }
+
+      if (!parsed.aiSummary || typeof parsed.aiSummary !== 'string' || (parsed.aiSummary as string).trim().length < 10) {
+        console.error("[AI-анализ] ИИ не дал текстовый разбор:", parsed);
+        throw new Error("ИИ не предоставил текстовый разбор профиля. Попробуйте ещё раз.");
       }
 
       setState((prev) => ({
         ...prev,
         isAnalyzing: false,
-        avatar: parsed.avatar || 'yellow',
-        bio: parsed.bio || 'red',
-        highlights: parsed.highlights || 'yellow',
-        feed: parsed.feed || 'yellow',
-        aiSummary: parsed.aiSummary || 'Анализ завершен, но ИИ не вернул текст разбора.',
+        avatar: parsed.avatar as TrafficLightStatus,
+        bio: parsed.bio as TrafficLightStatus,
+        highlights: parsed.highlights as TrafficLightStatus,
+        feed: parsed.feed as TrafficLightStatus,
+        aiSummary: parsed.aiSummary as string,
       }));
 
       addToast('success', 'Анализ завершён', 'ИИ проанализировал профиль и выставил оценки.');
     } catch (error) {
       console.error(error);
       setState((prev) => ({ ...prev, isAnalyzing: false }));
-      addToast('error', 'Ошибка анализа', 'Не удалось выполнить анализ. Возможно профиль недоступен для vision-модели.');
+      const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      addToast('error', 'Ошибка анализа', errMsg);
     }
   };
 

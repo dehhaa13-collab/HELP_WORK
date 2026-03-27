@@ -25,10 +25,23 @@ export const fetchGrokCompletion = async (messages: any[], model = 'grok-2-lates
 
   if (!response.ok) {
     const errorMsg = await response.text();
-    console.error(`Grok API Error: ${response.status} ${errorMsg}`);
-    throw new Error(`Ошибка API: ${response.status}`);
+    console.error(`[Grok API] HTTP ${response.status}:`, errorMsg);
+    throw new Error(`Ошибка Grok API (HTTP ${response.status}). Подробности в консоли.`);
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
+
+  // Строгая валидация ответа — никаких фейковых данных
+  if (!data || !data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+    console.error('[Grok API] Неожиданная структура ответа:', JSON.stringify(data, null, 2));
+    throw new Error('ИИ вернул пустой или некорректный ответ. Проверьте консоль.');
+  }
+
+  const content = data.choices[0]?.message?.content;
+  if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    console.error('[Grok API] Пустой content в ответе:', JSON.stringify(data.choices[0], null, 2));
+    throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
+  }
+
+  return content;
 };

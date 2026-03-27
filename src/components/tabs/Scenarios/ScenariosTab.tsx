@@ -63,27 +63,37 @@ ${competitorLinks}
       let generatedTopics: TopicItem[];
       try {
         generatedTopics = JSON.parse(cleanJson);
-        // Map to ensure properties are as expected
-        generatedTopics = generatedTopics.slice(0, 12).map((t, i) => ({
-          id: i + 1,
-          title: t.title || 'Без названия',
-          selected: false
-        }));
       } catch (e) {
-        console.error("Failed to parse JSON from Grok:", responseText);
-        throw new Error('Invalid JSON format from AI');
+        console.error("[Сценарии] Grok вернул не-JSON:", responseText);
+        throw new Error('ИИ вернул ответ в неверном формате (не JSON). Проверьте консоль.');
       }
 
-      if (!generatedTopics || generatedTopics.length === 0) {
-        throw new Error('Empty topics');
+      // Строгая валидация — если данные кривые, лучше честная ошибка
+      if (!Array.isArray(generatedTopics) || generatedTopics.length === 0) {
+        console.error('[Сценарии] ИИ вернул пустой или не-массив:', generatedTopics);
+        throw new Error('ИИ не сгенерировал ни одной темы. Попробуйте переформулировать запрос.');
       }
+
+      // Проверить что каждая тема имеет title
+      const invalidTopics = generatedTopics.filter(t => !t.title || typeof t.title !== 'string');
+      if (invalidTopics.length > 0) {
+        console.error('[Сценарии] Топики без title:', invalidTopics);
+        throw new Error(`ИИ вернул ${invalidTopics.length} тем без названия. Попробуйте ещё раз.`);
+      }
+
+      generatedTopics = generatedTopics.slice(0, 12).map((t, i) => ({
+        id: i + 1,
+        title: t.title,
+        selected: false
+      }));
 
       setTopics(generatedTopics);
       setStage('topics');
-      addToast('success', 'Темы сгенерированы', 'ИИ предложил темы на основе анализа конкурентов. Выберите до 10.');
+      addToast('success', 'Темы сгенерированы', `ИИ предложил ${generatedTopics.length} тем. Выберите до 10.`);
     } catch (error) {
       console.error(error);
-      addToast('error', 'Ошибка генерации', 'Не удалось проанализировать конкурентов (проверьте консоль).');
+      const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      addToast('error', 'Ошибка генерации', errMsg);
     } finally {
       setIsGenerating(false);
     }
@@ -139,22 +149,36 @@ ${selectedTitles}
       let generatedScripts: ScriptItem[];
       try {
         generatedScripts = JSON.parse(cleanJson);
-        generatedScripts = generatedScripts.map((s, i) => ({
-          id: i + 1,
-          topicTitle: s.topicTitle || selectedTopics[i]?.title || 'Сценарий',
-          content: s.content || ''
-        }));
       } catch (e) {
-        console.error("Failed to parse scripts from Grok:", responseText);
-        throw new Error('Invalid JSON');
+        console.error("[Сценарии] Grok вернул не-JSON для сценариев:", responseText);
+        throw new Error('ИИ вернул ответ в неверном формате (не JSON). Проверьте консоль.');
       }
+
+      if (!Array.isArray(generatedScripts) || generatedScripts.length === 0) {
+        console.error('[Сценарии] Пустой массив сценариев:', generatedScripts);
+        throw new Error('ИИ не сгенерировал ни одного сценария. Попробуйте ещё раз.');
+      }
+
+      // Проверить что у каждого сценария есть content
+      const emptyScripts = generatedScripts.filter(s => !s.content || typeof s.content !== 'string' || s.content.trim().length < 5);
+      if (emptyScripts.length > 0) {
+        console.error('[Сценарии] Сценарии без контента:', emptyScripts);
+        throw new Error(`ИИ вернул ${emptyScripts.length} пустых сценариев. Попробуйте ещё раз.`);
+      }
+
+      generatedScripts = generatedScripts.map((s, i) => ({
+        id: i + 1,
+        topicTitle: s.topicTitle || selectedTopics[i]?.title || `Тема ${i + 1}`,
+        content: s.content
+      }));
 
       setScripts(generatedScripts);
       setStage('scripts');
       addToast('success', 'Сценарии готовы', `Сгенерировано ${generatedScripts.length} сценариев.`);
     } catch (error) {
       console.error(error);
-      addToast('error', 'Ошибка генерации', 'Не удалось сгенерировать сценарии.');
+      const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      addToast('error', 'Ошибка генерации', errMsg);
     } finally {
       setIsGenerating(false);
     }

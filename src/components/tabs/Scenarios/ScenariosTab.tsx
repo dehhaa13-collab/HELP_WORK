@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { useToastStore } from '../../../store';
+import { fetchGrokCompletion } from '../../../utils/grokApi';
 import './ScenariosTab.css';
 
 interface Props {
@@ -42,29 +43,47 @@ export function ScenariosTab({ clientId: _clientId }: Props) {
     setIsGenerating(true);
 
     try {
-      // TODO: Grok API
-      await new Promise((r) => setTimeout(r, 2000));
+      const prompt = `Пожалуйста, проанализируй следующие ссылки конкурентов (или представь, что ты это сделал, основываясь на трендах ниши, если не можешь перейти по ссылкам) и предложи ровно 12 актуальных, вирусных тем для Reels:
+${competitorLinks}
 
-      const generatedTopics: TopicItem[] = [
-        { id: 1, title: 'Закулисье работы мастера: один день из жизни', selected: false },
-        { id: 2, title: 'До/После: трансформация клиента', selected: false },
-        { id: 3, title: 'Топ-5 ошибок, которые совершают клиенты', selected: false },
-        { id: 4, title: 'Ответы на часто задаваемые вопросы', selected: false },
-        { id: 5, title: 'Тренды 2026: что сейчас в моде', selected: false },
-        { id: 6, title: 'Разбор популярного мифа в нише', selected: false },
-        { id: 7, title: 'Лайфхак: как сохранить результат дольше', selected: false },
-        { id: 8, title: 'Отзыв довольного клиента (UGC формат)', selected: false },
-        { id: 9, title: 'Обзор продукта/инструмента, которым пользуется мастер', selected: false },
-        { id: 10, title: 'Мотивационное видео: история мастера и путь к успеху', selected: false },
-        { id: 11, title: 'Как выбрать правильного мастера (чек-лист)', selected: false },
-        { id: 12, title: 'Процесс работы крупным планом (ASMR/атмосфера)', selected: false },
-      ];
+ВЕРНИ ТОЛЬКО ВАЛИДНЫЙ JSON-МАССИВ С ОБЪЕКТАМИ (без блочных кавычек \`\`\`, без лишнего текста):
+[
+  { "id": 1, "title": "Название темы 1" },
+  { "id": 2, "title": "Название темы 2" },
+  ...
+]`;
+
+      const responseText = await fetchGrokCompletion([
+        { role: 'system', content: 'Ты опытный Instagram-продюсер. Ты возвращаешь строго JSON-массив без markdown разметки и без дополнительного текста.' },
+        { role: 'user', content: prompt }
+      ]);
+      
+      // Clean potential markdown blocks
+      const cleanJson = responseText.replace(/```(json)?/g, '').trim();
+      let generatedTopics: TopicItem[];
+      try {
+        generatedTopics = JSON.parse(cleanJson);
+        // Map to ensure properties are as expected
+        generatedTopics = generatedTopics.slice(0, 12).map((t, i) => ({
+          id: i + 1,
+          title: t.title || 'Без названия',
+          selected: false
+        }));
+      } catch (e) {
+        console.error("Failed to parse JSON from Grok:", responseText);
+        throw new Error('Invalid JSON format from AI');
+      }
+
+      if (!generatedTopics || generatedTopics.length === 0) {
+        throw new Error('Empty topics');
+      }
 
       setTopics(generatedTopics);
       setStage('topics');
-      addToast('success', 'Темы сгенерированы', 'ИИ предложил 12 тем на основе анализа конкурентов. Выберите 10.');
-    } catch {
-      addToast('error', 'Ошибка генерации', 'Не удалось проанализировать конкурентов.');
+      addToast('success', 'Темы сгенерированы', 'ИИ предложил темы на основе анализа конкурентов. Выберите до 10.');
+    } catch (error) {
+      console.error(error);
+      addToast('error', 'Ошибка генерации', 'Не удалось проанализировать конкурентов (проверьте консоль).');
     } finally {
       setIsGenerating(false);
     }
@@ -94,28 +113,47 @@ export function ScenariosTab({ clientId: _clientId }: Props) {
     setIsGenerating(true);
 
     try {
-      // TODO: Grok API
-      await new Promise((r) => setTimeout(r, 3000));
+      const selectedTitles = selectedTopics.map(t => t.title).join('; ');
+      const prompt = `Напиши короткие вирусные сценарии Reels для следующих тем:
+${selectedTitles}
 
-      const generatedScripts: ScriptItem[] = selectedTopics.map((topic, i) => ({
-        id: i + 1,
-        topicTitle: topic.title,
-        content:
-          `🎬 Сценарий #${i + 1}: ${topic.title}\n\n` +
-          `📍 Хук (первые 2 секунды):\n«Вы точно делаете ЭТУ ошибку...»\n\n` +
-          `📍 Основная часть (15-30 сек):\n` +
-          `- Показать проблему/процесс\n` +
-          `- Дать экспертное объяснение\n` +
-          `- Визуальная демонстрация\n\n` +
-          `📍 Призыв к действию:\n«Запишитесь по ссылке в описании — осталось 3 места на эту неделю»\n\n` +
-          `🎵 Музыка: Трендовый звук (подобрать актуальный)\n` +
-          `⏱ Хронометраж: 25-40 сек`,
-      }));
+Каждый сценарий должен иметь:
+1. Хук (2 секунды)
+2. Основная часть (15-30 сек)
+3. Призыв к действию (CTA)
+4. Подобранную музыку или тренд
+5. Ожидаемый хронометраж.
+
+ВЕРНИ ТОЛЬКО ВАЛИДНЫЙ JSON-МАССИВ (без блочных кавычек \`\`\`):
+[
+  { "id": 1, "topicTitle": "Тема 1", "content": "Текст сценария в markdown..." },
+  { "id": 2, "topicTitle": "Тема 2", "content": "Текст сценария в markdown..." }
+]`;
+
+      const responseText = await fetchGrokCompletion([
+        { role: 'system', content: 'Ты креативный сценарист Reels. Возвращай строго JSON-массив без markdown блока.' },
+        { role: 'user', content: prompt }
+      ]);
+
+      const cleanJson = responseText.replace(/```(json)?/g, '').trim();
+      let generatedScripts: ScriptItem[];
+      try {
+        generatedScripts = JSON.parse(cleanJson);
+        generatedScripts = generatedScripts.map((s, i) => ({
+          id: i + 1,
+          topicTitle: s.topicTitle || selectedTopics[i]?.title || 'Сценарий',
+          content: s.content || ''
+        }));
+      } catch (e) {
+        console.error("Failed to parse scripts from Grok:", responseText);
+        throw new Error('Invalid JSON');
+      }
 
       setScripts(generatedScripts);
       setStage('scripts');
       addToast('success', 'Сценарии готовы', `Сгенерировано ${generatedScripts.length} сценариев.`);
-    } catch {
+    } catch (error) {
+      console.error(error);
       addToast('error', 'Ошибка генерации', 'Не удалось сгенерировать сценарии.');
     } finally {
       setIsGenerating(false);

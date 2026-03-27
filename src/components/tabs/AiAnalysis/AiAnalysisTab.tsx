@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { useToastStore } from '../../../store';
+import { fetchGrokCompletion } from '../../../utils/grokApi';
 import type { TrafficLightStatus } from '../../../types';
 import './AiAnalysisTab.css';
 
@@ -71,29 +72,57 @@ export function AiAnalysisTab({ clientId: _clientId }: Props) {
     setState((prev) => ({ ...prev, isAnalyzing: true }));
 
     try {
-      // TODO: Интеграция с Grok API
-      // Пока имитация анализа
-      await new Promise((r) => setTimeout(r, 2000));
+      const prompt = `Проанализируй предоставленный скриншот Instagram-профиля. 
+Оцени каждый из 4-х элементов: Аватар, Описание (Bio), Хайлайтсы, Визуал ленты (Feed). 
+Для каждого выбери оценку: "red" (плохо), "yellow" (средне) или "green" (отлично).
+Напиши подробный AI-разбор (aiSummary) в формате Markdown, объясняя каждую оценку и давая советы по улучшению. Разбор должен быть на русском языке.
+
+ВЕРНИ ТОЛЬКО ВАЛИДНЫЙ JSON (без блочных кавычек \`\`\`, без прочего текста) в таком формате:
+{
+  "avatar": "red" | "yellow" | "green",
+  "bio": "red" | "yellow" | "green",
+  "highlights": "red" | "yellow" | "green",
+  "feed": "red" | "yellow" | "green",
+  "aiSummary": "Текст разбора..."
+}`;
+
+      // Using grok-2-vision-1212 for image analysis
+      const messages = [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: state.screenshotPreview } }
+          ]
+        }
+      ];
+
+      const responseText = await fetchGrokCompletion(messages, 'grok-2-vision-1212');
+      
+      const cleanJson = responseText.replace(/```(json)?/g, '').trim();
+      let parsed;
+      try {
+        parsed = JSON.parse(cleanJson);
+      } catch (e) {
+        console.error("Grok JSON parse error: ", responseText);
+        throw new Error("Invalid output format from Grok");
+      }
 
       setState((prev) => ({
         ...prev,
         isAnalyzing: false,
-        avatar: 'yellow',
-        bio: 'red',
-        highlights: 'green',
-        feed: 'yellow',
-        aiSummary:
-          '🔍 **Анализ профиля:**\n\n' +
-          '1. **Аватар** — средний уровень. Нужно добавить обложку с узнаваемым образом, сейчас фото слишком бытовое.\n\n' +
-          '2. **Описание (Bio)** — слабое. Нет УТП, нет призыва к действию. Рекомендация: добавить ключевую услугу + город + ссылку на запись.\n\n' +
-          '3. **Хайлайтсы** — отлично! Хорошая структура, обложки выполнены в едином стиле.\n\n' +
-          '4. **Лента** — средне. Нет визуальной концепции, публикации выглядят хаотично. Нужна контент-сетка с единым стилем обложек.',
+        avatar: parsed.avatar || 'yellow',
+        bio: parsed.bio || 'red',
+        highlights: parsed.highlights || 'yellow',
+        feed: parsed.feed || 'yellow',
+        aiSummary: parsed.aiSummary || 'Анализ завершен, но ИИ не вернул текст разбора.',
       }));
 
       addToast('success', 'Анализ завершён', 'ИИ проанализировал профиль и выставил оценки.');
-    } catch {
+    } catch (error) {
+      console.error(error);
       setState((prev) => ({ ...prev, isAnalyzing: false }));
-      addToast('error', 'Ошибка анализа', 'Не удалось выполнить анализ. Проверьте подключение к интернету.');
+      addToast('error', 'Ошибка анализа', 'Не удалось выполнить анализ. Возможно профиль недоступен для vision-модели.');
     }
   };
 

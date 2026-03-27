@@ -78,8 +78,33 @@ interface ClientState {
 
 const generateId = () => crypto.randomUUID();
 
+const CLIENTS_STORAGE_KEY = 'helper_work_clients';
+
+// Загрузить клиентов из localStorage
+const getSavedClients = (): Client[] => {
+  try {
+    const saved = localStorage.getItem(CLIENTS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {
+    localStorage.removeItem(CLIENTS_STORAGE_KEY);
+  }
+  return [];
+};
+
+// Сохранить клиентов в localStorage
+const saveClients = (clients: Client[]) => {
+  try {
+    localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(clients));
+  } catch (e) {
+    console.error('[Store] Не удалось сохранить клиентов:', e);
+  }
+};
+
 export const useClientStore = create<ClientState>((set, get) => ({
-  clients: [],
+  clients: getSavedClients(),
   selectedClientId: null,
 
   selectClient: (id) => {
@@ -95,22 +120,32 @@ export const useClientStore = create<ClientState>((set, get) => ({
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    set((state) => ({ clients: [...state.clients, newClient] }));
+    set((state) => {
+      const updated = [...state.clients, newClient];
+      saveClients(updated);
+      return { clients: updated };
+    });
   },
 
   removeClient: (id) => {
-    set((state) => ({
-      clients: state.clients.filter((c) => c.id !== id),
-      selectedClientId: state.selectedClientId === id ? null : state.selectedClientId,
-    }));
+    set((state) => {
+      const updated = state.clients.filter((c) => c.id !== id);
+      saveClients(updated);
+      return {
+        clients: updated,
+        selectedClientId: state.selectedClientId === id ? null : state.selectedClientId,
+      };
+    });
   },
 
   updateClient: (id, updates) => {
-    set((state) => ({
-      clients: state.clients.map((c) =>
+    set((state) => {
+      const updated = state.clients.map((c) =>
         c.id === id ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c
-      ),
-    }));
+      );
+      saveClients(updated);
+      return { clients: updated };
+    });
   },
 
   advanceStage: (id) => {

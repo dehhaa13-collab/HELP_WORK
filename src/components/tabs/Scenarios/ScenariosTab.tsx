@@ -56,7 +56,7 @@ ${competitorLinks}
       const responseText = await fetchGeminiCompletion([
         { role: 'system', content: 'Ты опытный Instagram-продюсер. Строго придерживайся JSON структуры и не возвращай ничего, кроме JSON.' },
         { role: 'user', content: prompt }
-      ], 'gemini-1.5-flash');
+      ]);
       
       // Clean potential markdown blocks
       const cleanJson = responseText.replace(/```(json)?/g, '').trim();
@@ -143,7 +143,7 @@ ${selectedTitles}
       const responseText = await fetchGeminiCompletion([
         { role: 'system', content: 'Ты креативный сценарист Reels. Возвращай строго JSON-массив.' },
         { role: 'user', content: prompt }
-      ], 'gemini-1.5-flash');
+      ]);
 
       const cleanJson = responseText.replace(/```(json)?/g, '').trim();
       let generatedScripts: ScriptItem[];

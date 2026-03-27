@@ -12,7 +12,7 @@ export const getGeminiKey = () => {
  * Универсальная функция для работы с Gemini API.
  * Принимает формат сообщений как у OpenAI/Grok и конвертирует в формат Gemini.
  */
-export const fetchGeminiCompletion = async (messages: any[], model = 'gemini-1.5-flash-latest') => {
+export const fetchGeminiCompletion = async (messages: any[], model = 'gemini-2.5-flash') => {
   const apiKey = getGeminiKey();
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 

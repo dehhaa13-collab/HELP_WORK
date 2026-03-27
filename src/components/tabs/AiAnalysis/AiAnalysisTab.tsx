@@ -97,7 +97,7 @@ export function AiAnalysisTab({ clientId: _clientId }: Props) {
         }
       ];
 
-      const responseText = await fetchGeminiCompletion(messages, 'gemini-1.5-flash');
+      const responseText = await fetchGeminiCompletion(messages);
       
       const cleanJson = responseText.replace(/```(json)?/g, '').trim();
       let parsed: Record<string, unknown>;

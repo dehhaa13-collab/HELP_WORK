@@ -11,7 +11,7 @@ import { PIPELINE_STAGES } from '../types';
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => boolean;
+  login: (username: string, password: string, rememberMe: boolean) => boolean;
   logout: () => void;
 }
 
@@ -20,20 +20,46 @@ const USERS: { username: string; password: string; user: User }[] = [
   { username: 'dasha', password: '12345', user: { id: '2', name: 'Даша', role: 'assistant' } },
 ];
 
+const AUTH_STORAGE_KEY = 'helper_work_auth';
+
+// Восстановить сессию из localStorage при загрузке
+const getSavedAuth = (): { user: User; isAuthenticated: boolean } | null => {
+  try {
+    const saved = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.user && parsed.isAuthenticated) {
+        return { user: parsed.user, isAuthenticated: true };
+      }
+    }
+  } catch {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  }
+  return null;
+};
+
+const savedAuth = getSavedAuth();
+
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isAuthenticated: false,
-  login: (username: string, password: string) => {
+  user: savedAuth?.user ?? null,
+  isAuthenticated: savedAuth?.isAuthenticated ?? false,
+  login: (username: string, password: string, rememberMe: boolean) => {
     const found = USERS.find(
       (u) => u.username.toLowerCase() === username.toLowerCase() && u.password === password
     );
     if (found) {
       set({ user: found.user, isAuthenticated: true });
+      if (rememberMe) {
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: found.user, isAuthenticated: true }));
+      } else {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+      }
       return true;
     }
     return false;
   },
   logout: () => {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
     set({ user: null, isAuthenticated: false });
   },
 }));

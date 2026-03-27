@@ -89,6 +89,31 @@
   to { transform: rotate(360deg); }
 }
 
+/* Remember me */
+.login-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  user-select: none;
+  margin-top: -4px;
+  margin-bottom: 4px;
+}
+
+.login-remember input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.login-remember span {
+  line-height: 1;
+}
+
 /* Анимация появления карточки */
 .login-card {
   animation: login-appear 0.5s ease;

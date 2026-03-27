@@ -9,6 +9,7 @@ import './LoginPage.css';
 export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const login = useAuthStore((s) => s.login);
   const addToast = useToastStore((s) => s.addToast);
@@ -26,7 +27,7 @@ export function LoginPage() {
     // Имитация задержки сети для реалистичности
     await new Promise((r) => setTimeout(r, 400));
 
-    const success = login(username.trim(), password);
+    const success = login(username.trim(), password, rememberMe);
     setIsLoading(false);
 
     if (!success) {
@@ -72,6 +73,15 @@ export function LoginPage() {
               autoComplete="current-password"
             />
           </div>
+
+          <label className="login-remember">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            <span>Запомнить меня</span>
+          </label>
 
           <button
             type="submit"

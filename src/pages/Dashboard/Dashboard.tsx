@@ -30,7 +30,7 @@ export function Dashboard() {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [handleEscape]);
 
-  const handleAddClient = () => {
+  const handleAddClient = async () => {
     if (!newName.trim()) {
       addToast('warning', 'Введите имя', 'Укажите имя клиента для добавления.');
       return;
@@ -40,30 +40,45 @@ export function Dashboard() {
       return;
     }
 
-    addClient(newName.trim(), newInstagram.trim());
-    addToast('success', 'Клиент добавлен', `${newName.trim()} добавлен в систему.`);
-    setNewName('');
-    setNewInstagram('');
-    setShowAddModal(false);
-  };
-
-  const handleRemoveClient = (client: Client) => {
-    if (window.confirm(`Удалить клиента "${client.name}"? Это действие необратимо.`)) {
-      removeClient(client.id);
-      addToast('info', 'Клиент удалён', `${client.name} удалён из системы.`);
+    try {
+      await addClient(newName.trim(), newInstagram.trim());
+      addToast('success', 'Клиент добавлен', `${newName.trim()} добавлен в систему.`);
+      setNewName('');
+      setNewInstagram('');
+      setShowAddModal(false);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      addToast('error', 'Ошибка добавления', errMsg);
     }
   };
 
-  const handleAdvanceStage = (e: React.MouseEvent, client: Client) => {
+  const handleRemoveClient = async (client: Client) => {
+    if (window.confirm(`Удалить клиента "${client.name}"? Это действие необратимо.`)) {
+      try {
+        await removeClient(client.id);
+        addToast('info', 'Клиент удалён', `${client.name} удалён из системы.`);
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
+        addToast('error', 'Ошибка удаления', errMsg);
+      }
+    }
+  };
+
+  const handleAdvanceStage = async (e: React.MouseEvent, client: Client) => {
     e.stopPropagation();
     const currentIndex = PIPELINE_STAGES.findIndex((s) => s.key === client.pipelineStage);
     if (currentIndex >= PIPELINE_STAGES.length - 1) {
       addToast('info', 'Последний этап', `${client.name} уже на финальном этапе «Продление».`);
       return;
     }
-    advanceStage(client.id);
-    const nextStage = PIPELINE_STAGES[currentIndex + 1];
-    addToast('success', 'Этап обновлён', `${client.name} переведён на этап «${nextStage.emoji} ${nextStage.label}».`);
+    try {
+      await advanceStage(client.id);
+      const nextStage = PIPELINE_STAGES[currentIndex + 1];
+      addToast('success', 'Этап обновлён', `${client.name} переведён на этап «${nextStage.emoji} ${nextStage.label}».`);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      addToast('error', 'Ошибка обновления', errMsg);
+    }
   };
 
   const getStageInfo = (client: Client) => {

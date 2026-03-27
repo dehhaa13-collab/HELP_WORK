@@ -107,7 +107,7 @@ export function AiAnalysisTab({ clientId: _clientId }: Props) {
   const renderTrafficLight = (label: string, field: 'avatar' | 'bio' | 'highlights' | 'feed') => {
     const value = state[field];
     return (
-      <div className="traffic-light-item" onClick={() => cycleStatus(field)}>
+      <div className="traffic-light-item" onClick={() => cycleStatus(field)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cycleStatus(field); } }} role="button" tabIndex={0}>
         <div
           className="traffic-light-indicator"
           style={{

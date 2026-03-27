@@ -2,7 +2,7 @@
    Dashboard — Главный экран с Pipeline клиентов
    ============================================ */
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore, useClientStore, useToastStore } from '../../store';
 import { PIPELINE_STAGES } from '../../types';
 import type { Client } from '../../types';
@@ -17,6 +17,18 @@ export function Dashboard() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newInstagram, setNewInstagram] = useState('');
+
+  // Escape to close modal
+  const handleEscape = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape' && showAddModal) {
+      setShowAddModal(false);
+    }
+  }, [showAddModal]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [handleEscape]);
 
   const handleAddClient = () => {
     if (!newName.trim()) {
@@ -128,6 +140,7 @@ export function Dashboard() {
                   key={client.id}
                   className="client-card card"
                   onClick={() => selectClient(client.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectClient(client.id); } }}
                   role="button"
                   tabIndex={0}
                 >

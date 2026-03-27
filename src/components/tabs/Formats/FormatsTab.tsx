@@ -96,7 +96,7 @@ export function FormatsTab({ clientId: _clientId }: Props) {
             <span className="formats-stat-emoji">{f.emoji}</span>
             <span className="formats-stat-label">{f.label}:</span>
             <span className="formats-stat-count" style={{ color: f.color }}>
-              {stats[f.value || 'reels']}
+              {stats[f.value as keyof typeof stats]}
             </span>
           </div>
         ))}

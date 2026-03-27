@@ -3,7 +3,7 @@
    Боковое меню + вкладки
    ============================================ */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useClientStore } from '../../store';
 import { PIPELINE_STAGES } from '../../types';
 import { AiAnalysisTab } from '../../components/tabs/AiAnalysis/AiAnalysisTab';
@@ -37,8 +37,13 @@ export function ClientWorkspace() {
 
   const client = clients.find((c) => c.id === selectedClientId);
 
+  useEffect(() => {
+    if (selectedClientId && !client) {
+      selectClient(null);
+    }
+  }, [selectedClientId, client, selectClient]);
+
   if (!client) {
-    selectClient(null);
     return null;
   }
 

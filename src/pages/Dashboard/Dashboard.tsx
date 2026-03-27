@@ -73,7 +73,7 @@ export function Dashboard() {
         </div>
         <div className="dashboard-header-right">
           <span className="dashboard-client-count badge badge-primary">
-            {clients.length} {clients.length === 1 ? 'клиент' : clients.length < 5 ? 'клиента' : 'клиентов'}
+            {clients.length} {(() => { const n = clients.length % 10; const n100 = clients.length % 100; if (n100 >= 11 && n100 <= 14) return 'клиентов'; if (n === 1) return 'клиент'; if (n >= 2 && n <= 4) return 'клиента'; return 'клиентов'; })()}
           </span>
           <button className="btn btn-ghost" onClick={logout}>
             Выйти
@@ -206,7 +206,7 @@ export function Dashboard() {
       {/* Add Client Modal */}
       {showAddModal && (
         <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-          <div className="modal card" onClick={(e) => e.stopPropagation()}>
+          <div className="modal card" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddClient(); } }}>
             <div className="modal-header">
               <h2>Новый клиент</h2>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowAddModal(false)}>✕</button>

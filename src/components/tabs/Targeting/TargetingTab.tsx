@@ -75,7 +75,7 @@ export function TargetingTab({ clientId: _clientId }: Props) {
         <div className="targeting-stat card">
           <div className="card-body">
             <span className="targeting-stat-emoji">⏳</span>
-            <span className="targeting-stat-value">{promotedCount - finishedCount}</span>
+            <span className="targeting-stat-value">{Math.max(0, promotedCount - finishedCount)}</span>
             <span className="targeting-stat-label">Активно</span>
           </div>
         </div>

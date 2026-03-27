@@ -170,7 +170,7 @@ export function ScenariosTab({ clientId: _clientId }: Props) {
               className="btn btn-primary btn-lg ai-analyze-btn"
               onClick={handleAnalyzeCompetitors}
               disabled={isGenerating}
-              style={{ marginTop: 'var(--space-4)' }}
+              style={{ marginTop: '1rem' }}
             >
               {isGenerating ? (
                 <>
@@ -210,7 +210,7 @@ export function ScenariosTab({ clientId: _clientId }: Props) {
               className="btn btn-primary btn-lg ai-analyze-btn"
               onClick={handleGenerateScripts}
               disabled={isGenerating || selectedCount === 0}
-              style={{ marginTop: 'var(--space-4)' }}
+              style={{ marginTop: '1rem' }}
             >
               {isGenerating ? (
                 <>

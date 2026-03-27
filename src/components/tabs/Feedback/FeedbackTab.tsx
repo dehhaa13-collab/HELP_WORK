@@ -72,7 +72,7 @@ export function FeedbackTab({ clientId: _clientId }: Props) {
           <button
             className="btn btn-primary"
             onClick={handleAdd}
-            style={{ marginTop: 'var(--space-3)' }}
+            style={{ marginTop: '0.75rem' }}
           >
             💾 Сохранить
           </button>

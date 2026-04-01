@@ -1,13 +1,16 @@
 /* ============================================
    ClientWorkspace — Стили
+   Десктоп: боковое меню
+   Мобайл: верхний хедер + нижняя таб-навигация (iOS-style)
    ============================================ */
 
 .workspace {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
-/* Sidebar */
+/* ===== Desktop Sidebar ===== */
 .workspace-sidebar {
   width: var(--sidebar-width);
   background-color: var(--color-sidebar-bg);
@@ -20,6 +23,7 @@
   bottom: 0;
   overflow-y: auto;
   z-index: 50;
+  -webkit-overflow-scrolling: touch;
 }
 
 .sidebar-client-info {
@@ -132,12 +136,13 @@
   text-align: center;
 }
 
-/* Main */
+/* ===== Main Content ===== */
 .workspace-main {
   flex: 1;
   margin-left: var(--sidebar-width);
   background-color: var(--color-bg);
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .workspace-tab-header {
@@ -160,17 +165,183 @@
   max-width: 1000px;
 }
 
-/* Responsive */
+/* ===== Mobile Header (hidden on desktop) ===== */
+.mobile-header {
+  display: none;
+}
+
+/* ===== Mobile Bottom Navigation (hidden on desktop) ===== */
+.mobile-bottom-nav {
+  display: none;
+}
+
+/* ============================================
+   MOBILE RESPONSIVE — iPhone Safari optimized
+   ============================================ */
 @media (max-width: 768px) {
-  .workspace-sidebar {
-    display: none; /* TODO: mobile hamburger menu */
+  .workspace {
+    flex-direction: column;
   }
 
+  /* Hide desktop sidebar */
+  .workspace-sidebar {
+    display: none;
+  }
+
+  /* Main fills full width */
   .workspace-main {
     margin-left: 0;
+    /* Leave space for mobile header (56px) and bottom nav (60px + safe area) */
+    padding-top: 56px;
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Mobile top header */
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    height: 56px;
+    padding: 0 var(--space-4);
+    padding-top: env(safe-area-inset-top, 0px);
+    background-color: var(--color-sidebar-bg);
+    color: #FFFFFF;
+  }
+
+  .mobile-back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: var(--radius-md);
+    color: #FFFFFF;
+    font-size: var(--font-size-lg);
+    cursor: pointer;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-back-btn:active {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .mobile-header-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .mobile-header-name {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-header-stage {
+    font-size: 11px;
+    color: var(--color-text-muted);
+  }
+
+  /* Workspace tab header adjustments for mobile */
+  .workspace-tab-header {
+    padding: var(--space-3) var(--space-4);
+    position: static; /* Don't sticky on mobile — we have mobile-header */
+  }
+
+  .workspace-tab-title {
+    font-size: var(--font-size-base);
   }
 
   .workspace-tab-content {
     padding: var(--space-4);
+    padding-bottom: calc(var(--space-6) + 60px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ===== iOS-style bottom tab bar ===== */
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background-color: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    /* iOS safe area for home indicator */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+    /* Prevent iOS backdrop blur jitter */
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    background-color: rgba(255, 255, 255, 0.92);
+  }
+
+  .mobile-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 0;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-family: var(--font-family);
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color var(--transition-fast);
+    -webkit-tap-highlight-color: transparent;
+    /* Prevent double-tap zoom on iOS */
+    touch-action: manipulation;
+  }
+
+  .mobile-nav-item:active {
+    opacity: 0.7;
+  }
+
+  .mobile-nav-emoji {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .mobile-nav-label {
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .mobile-nav-item-active {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  .mobile-nav-item-active .mobile-nav-emoji {
+    transform: scale(1.1);
+  }
+}
+
+/* Extra small phones (iPhone SE, etc.) */
+@media (max-width: 380px) {
+  .mobile-nav-label {
+    font-size: 9px;
+  }
+
+  .mobile-nav-emoji {
+    font-size: 18px;
+  }
+
+  .workspace-tab-content {
+    padding: var(--space-3);
   }
 }

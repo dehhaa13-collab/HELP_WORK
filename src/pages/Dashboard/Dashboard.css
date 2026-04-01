@@ -347,10 +347,36 @@
 @media (max-width: 768px) {
   .dashboard-header {
     padding: var(--space-3) var(--space-4);
+    padding-top: calc(var(--space-3) + env(safe-area-inset-top, 0px));
+  }
+
+  .dashboard-logo-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.5rem;
+    border-radius: var(--radius-md);
+  }
+
+  .dashboard-title {
+    font-size: var(--font-size-base);
+  }
+
+  .dashboard-welcome {
+    display: none;
   }
 
   .pipeline-legend {
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-2) var(--space-3);
+    gap: 0;
+  }
+
+  .pipeline-legend-item {
+    font-size: 10px;
+    padding: var(--space-1);
+  }
+
+  .pipeline-legend-label {
+    display: none;
   }
 
   .dashboard-content {
@@ -365,6 +391,16 @@
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-3);
+  }
+
+  /* On touch devices, delete button is always visible */
+  .client-delete {
+    opacity: 1;
+  }
+
+  /* Card should not hover-transform on mobile (feels janky on touch) */
+  .client-card:hover {
+    transform: none;
   }
 }
 

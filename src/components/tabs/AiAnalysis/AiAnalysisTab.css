@@ -150,3 +150,40 @@
 .ai-summary-text p:empty {
   display: none;
 }
+
+/* === Mobile === */
+@media (max-width: 768px) {
+  .ai-upload-area {
+    padding: var(--space-6);
+  }
+
+  .ai-screenshot-preview {
+    max-width: 100%;
+  }
+
+  .traffic-light-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .traffic-light-item {
+    padding: var(--space-3);
+    /* Better touch target for iOS */
+    min-height: 56px;
+  }
+
+  .traffic-light-hint {
+    display: none;
+  }
+
+  .ai-summary-text {
+    font-size: var(--font-size-sm);
+    line-height: 1.7;
+    word-break: break-word;
+  }
+
+  .ai-analyze-btn {
+    /* iOS: ensure button is tall enough for comfortable taps */
+    min-height: 52px;
+    font-size: var(--font-size-base);
+  }
+}

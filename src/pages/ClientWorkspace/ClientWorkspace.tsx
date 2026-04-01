@@ -1,6 +1,6 @@
 /* ============================================
    ClientWorkspace — Рабочее пространство клиента
-   Боковое меню + вкладки
+   Боковое меню (десктоп) + нижняя навигация (мобайл) + вкладки
    ============================================ */
 
 import { useState, useEffect } from 'react';
@@ -71,9 +71,8 @@ export function ClientWorkspace() {
 
   return (
     <div className="workspace">
-      {/* Sidebar */}
+      {/* Desktop Sidebar */}
       <aside className="workspace-sidebar">
-        {/* Client Info Header */}
         <div className="sidebar-client-info">
           <button
             className="sidebar-back-btn"
@@ -92,7 +91,6 @@ export function ClientWorkspace() {
           </div>
         </div>
 
-        {/* Nav Tabs */}
         <nav className="sidebar-nav">
           {TABS.map((tab) => (
             <button
@@ -109,6 +107,20 @@ export function ClientWorkspace() {
 
       {/* Main Content */}
       <main className="workspace-main">
+        {/* Mobile Header */}
+        <div className="mobile-header">
+          <button
+            className="mobile-back-btn"
+            onClick={() => selectClient(null)}
+          >
+            ←
+          </button>
+          <div className="mobile-header-info">
+            <span className="mobile-header-name">{client.name}</span>
+            <span className="mobile-header-stage">{stageInfo?.emoji} {stageInfo?.label}</span>
+          </div>
+        </div>
+
         <div className="workspace-tab-header">
           <h2 className="workspace-tab-title">
             {TABS.find((t) => t.key === activeTab)?.emoji}{' '}
@@ -119,6 +131,20 @@ export function ClientWorkspace() {
           {renderTab()}
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation (iOS-style tab bar) */}
+      <nav className="mobile-bottom-nav">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            className={`mobile-nav-item ${activeTab === tab.key ? 'mobile-nav-item-active' : ''}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            <span className="mobile-nav-emoji">{tab.emoji}</span>
+            <span className="mobile-nav-label">{tab.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

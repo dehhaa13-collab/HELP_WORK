@@ -84,12 +84,15 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* iOS Safari: prevent text size adjust on orientation change */
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -99,10 +102,14 @@ body {
   background-color: var(--color-bg);
   line-height: 1.6;
   min-height: 100vh;
+  min-height: 100dvh; /* iOS Safari dynamic viewport height */
+  /* Prevent iOS Safari rubber-band bounce */
+  overscroll-behavior-y: none;
 }
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 a {
@@ -118,6 +125,20 @@ a:hover {
 img {
   max-width: 100%;
   display: block;
+}
+
+/* iOS Safari: proper focus styles for inputs */
+input, textarea, select, button {
+  font-family: inherit;
+  font-size: inherit;
+  /* Prevent iOS zoom on focus */
+  font-size: max(16px, 1rem);
+}
+
+textarea {
+  /* iOS: allow normal text selection */
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* === Utility Classes === */
@@ -391,5 +412,14 @@ img {
 @media (max-width: 768px) {
   :root {
     --sidebar-width: 0px;
+  }
+
+  .toast-container {
+    top: auto;
+    bottom: var(--space-4);
+    bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+    left: var(--space-3);
+    right: var(--space-3);
+    max-width: 100%;
   }
 }

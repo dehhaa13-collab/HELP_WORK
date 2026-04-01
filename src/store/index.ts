@@ -4,6 +4,7 @@
    ============================================ */
 
 import { create } from 'zustand';
+import * as Sentry from '@sentry/react';
 import type { Client, PipelineStage, Toast, ToastType, User } from '../types';
 import { PIPELINE_STAGES } from '../types';
 import { supabase } from '../utils/supabase';
@@ -30,12 +31,16 @@ const getSavedAuth = (): { user: User; isAuthenticated: boolean } | null => {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed && parsed.user && parsed.isAuthenticated) {
+        // Связываем сессию с Sentry при восстановлении входа
+        Sentry.setUser({ id: parsed.user.id, username: parsed.user.name, role: parsed.user.role });
         return { user: parsed.user, isAuthenticated: true };
       }
     }
   } catch {
     localStorage.removeItem(AUTH_STORAGE_KEY);
   }
+  // Убираем юзера из Sentry если не залогинен
+  Sentry.setUser(null);
   return null;
 };
 
@@ -50,6 +55,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     );
     if (found) {
       set({ user: found.user, isAuthenticated: true });
+      
+      // Отправляем данные в Sentry, чтобы знать, что ошибка случилась именно у Даши
+      Sentry.setUser({ id: found.user.id, username: found.user.name, role: found.user.role });
+
       if (rememberMe) {
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: found.user, isAuthenticated: true }));
       } else {
@@ -61,6 +70,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   logout: () => {
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    Sentry.setUser(null);
     set({ user: null, isAuthenticated: false });
   },
 }));

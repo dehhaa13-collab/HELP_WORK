@@ -120,7 +120,8 @@ export function AiAnalysisTab({ clientId }: Props) {
         }
       ];
 
-      const responseText = await fetchGeminiCompletion(messages);
+      // Здесь передаем temperature = 0.1 для максимальной детерминированности и строгой оценки
+      const responseText = await fetchGeminiCompletion(messages, 0.1);
       
       // Агрессивная экстракция JSON — пробует 4 стратегии парсинга
       const parsed = extractJsonFromText(responseText);

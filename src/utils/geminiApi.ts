@@ -61,10 +61,10 @@ export const fetchGeminiCompletion = async (messages: any[], model = 'gemini-2.5
     };
   }
 
-  // Заставляем модель гарантированно возвращать чистый JSON
+  // Заставляем модель возвращать чистый JSON
   body.generationConfig = {
     responseMimeType: 'application/json',
-    temperature: 0.7
+    temperature: 0.7,
   };
 
   const response = await fetch(url, {
@@ -114,3 +114,44 @@ export const fetchGeminiCompletion = async (messages: any[], model = 'gemini-2.5
 
   return content;
 };
+
+/**
+ * Агрессивная экстракция JSON из текста ИИ.
+ * Пробует несколько стратегий, чтобы достать валидный JSON-объект
+ * даже если модель обернула его в markdown-блоки или добавила текст.
+ */
+export function extractJsonFromText(raw: string): Record<string, unknown> {
+  const trimmed = raw.trim();
+
+  // Стратегия 1: прямой парс
+  try {
+    return JSON.parse(trimmed);
+  } catch { /* continue */ }
+
+  // Стратегия 2: убрать ```json ... ``` блоки
+  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    try {
+      return JSON.parse(codeBlockMatch[1].trim());
+    } catch { /* continue */ }
+  }
+
+  // Стратегия 3: найти первый { ... } блок (greedy)
+  const braceMatch = trimmed.match(/(\{[\s\S]*\})/);
+  if (braceMatch) {
+    try {
+      return JSON.parse(braceMatch[1]);
+    } catch { /* continue */ }
+  }
+
+  // Стратегия 4: убрать все не-JSON символы в начале и конце
+  const stripped = trimmed.replace(/^[^{]*/, '').replace(/[^}]*$/, '');
+  if (stripped) {
+    try {
+      return JSON.parse(stripped);
+    } catch { /* continue */ }
+  }
+
+  console.error('[extractJsonFromText] Не удалось извлечь JSON из:', raw.substring(0, 500));
+  throw new Error('ИИ вернул ответ в неверном формате. Попробуйте ещё раз.');
+}

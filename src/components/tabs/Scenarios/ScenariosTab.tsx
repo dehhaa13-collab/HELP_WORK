@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useToastStore } from '../../../store';
-import { fetchGeminiCompletion } from '../../../utils/geminiApi';
+import { fetchGeminiCompletion, extractJsonFromText } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
 import './ScenariosTab.css';
 
@@ -59,13 +59,12 @@ ${competitorLinks}
         { role: 'user', content: prompt }
       ]);
       
-      // Clean potential markdown blocks
-      const cleanJson = responseText.replace(/```(json)?/g, '').trim();
+      // Агрессивная экстракция JSON
       let generatedTopics: TopicItem[];
       try {
-        generatedTopics = JSON.parse(cleanJson);
+        generatedTopics = extractJsonFromText(responseText) as unknown as TopicItem[];
       } catch (e) {
-        console.error("[Сценарии] Grok вернул не-JSON:", responseText);
+        console.error("[Сценарии] Ошибка извлечения JSON:", responseText);
         throw new Error('ИИ вернул ответ в неверном формате (не JSON). Проверьте консоль.');
       }
 
@@ -146,12 +145,12 @@ ${selectedTitles}
         { role: 'user', content: prompt }
       ]);
 
-      const cleanJson = responseText.replace(/```(json)?/g, '').trim();
+      // Агрессивная экстракция JSON
       let generatedScripts: ScriptItem[];
       try {
-        generatedScripts = JSON.parse(cleanJson);
+        generatedScripts = extractJsonFromText(responseText) as unknown as ScriptItem[];
       } catch (e) {
-        console.error("[Сценарии] Grok вернул не-JSON для сценариев:", responseText);
+        console.error("[Сценарии] Ошибка извлечения JSON для сценариев:", responseText);
         throw new Error('ИИ вернул ответ в неверном формате (не JSON). Проверьте консоль.');
       }
 

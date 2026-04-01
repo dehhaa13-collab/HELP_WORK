@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useToastStore } from '../../../store';
-import { fetchGeminiCompletion } from '../../../utils/geminiApi';
+import { fetchGeminiCompletion, extractJsonFromText } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
 import type { TrafficLightStatus } from '../../../types';
 import './AiAnalysisTab.css';
@@ -122,14 +122,8 @@ export function AiAnalysisTab({ clientId }: Props) {
 
       const responseText = await fetchGeminiCompletion(messages);
       
-      const cleanJson = responseText.replace(/```(json)?/g, '').trim();
-      let parsed: Record<string, unknown>;
-      try {
-        parsed = JSON.parse(cleanJson);
-      } catch (e) {
-        console.error("[AI-анализ] Grok вернул не-JSON:", responseText);
-        throw new Error("ИИ вернул ответ в неверном формате (не JSON). Проверьте консоль.");
-      }
+      // Агрессивная экстракция JSON — пробует 4 стратегии парсинга
+      const parsed = extractJsonFromText(responseText);
 
       // Строгая валидация — никаких фейковых данных
       const validStatuses = ['red', 'yellow', 'green'];

@@ -3,7 +3,7 @@
    Instagram-сетка с выбором типа контента
    ============================================ */
 
-import { useState } from 'react';
+import { usePersistedState } from '../../../utils/usePersistedState';
 import type { PostFormat } from '../../../types';
 import './FormatsTab.css';
 
@@ -22,9 +22,10 @@ const FORMAT_OPTIONS: { value: PostFormat; label: string; emoji: string; color: 
   { value: 'carousel', label: 'Карусель', emoji: '📑', color: '#7C3AED' },
 ];
 
-export function FormatsTab({ clientId: _clientId }: Props) {
-  const [slotCount, setSlotCount] = useState(10);
-  const [slots, setSlots] = useState<Slot[]>(() =>
+export function FormatsTab({ clientId }: Props) {
+  const [slotCount, setSlotCount] = usePersistedState(`hw_formats_count_${clientId}`, 10);
+  const [slots, setSlots] = usePersistedState<Slot[]>(
+    `hw_formats_slots_${clientId}`,
     Array.from({ length: 10 }, (_, i) => ({ id: i + 1, format: null }))
   );
 

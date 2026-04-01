@@ -3,7 +3,7 @@
    Чеклист: смонтировано, обложка, отдано клиенту
    ============================================ */
 
-import { useState } from 'react';
+import { usePersistedState } from '../../../utils/usePersistedState';
 import './EditingTab.css';
 
 interface Props {
@@ -17,8 +17,9 @@ interface EditItem {
   deliveredToClient: boolean;
 }
 
-export function EditingTab({ clientId: _clientId }: Props) {
-  const [items, setItems] = useState<EditItem[]>(() =>
+export function EditingTab({ clientId }: Props) {
+  const [items, setItems] = usePersistedState<EditItem[]>(
+    `hw_editing_${clientId}`,
     Array.from({ length: 10 }, (_, i) => ({
       id: i + 1,
       editingDone: false,

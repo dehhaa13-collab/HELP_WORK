@@ -3,7 +3,7 @@
    Управление рекламой по каждой публикации
    ============================================ */
 
-import { useState } from 'react';
+import { usePersistedState } from '../../../utils/usePersistedState';
 import './TargetingTab.css';
 
 interface Props {
@@ -17,8 +17,9 @@ interface TargetItem {
   campaignFinished: boolean;
 }
 
-export function TargetingTab({ clientId: _clientId }: Props) {
-  const [items, setItems] = useState<TargetItem[]>(() =>
+export function TargetingTab({ clientId }: Props) {
+  const [items, setItems] = usePersistedState<TargetItem[]>(
+    `hw_targeting_${clientId}`,
     Array.from({ length: 10 }, (_, i) => ({
       id: i + 1,
       isPromoted: false,

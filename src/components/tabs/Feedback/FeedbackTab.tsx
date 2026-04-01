@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { useToastStore } from '../../../store';
+import { usePersistedState } from '../../../utils/usePersistedState';
 import './FeedbackTab.css';
 
 interface Props {
@@ -17,9 +18,9 @@ interface FeedbackEntry {
   createdAt: string;
 }
 
-export function FeedbackTab({ clientId: _clientId }: Props) {
+export function FeedbackTab({ clientId }: Props) {
   const addToast = useToastStore((s) => s.addToast);
-  const [entries, setEntries] = useState<FeedbackEntry[]>([]);
+  const [entries, setEntries] = usePersistedState<FeedbackEntry[]>(`hw_feedback_${clientId}`, []);
   const [newEntry, setNewEntry] = useState('');
 
   const handleAdd = () => {

@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { useToastStore } from '../../../store';
 import { fetchGeminiCompletion } from '../../../utils/geminiApi';
+import { usePersistedState } from '../../../utils/usePersistedState';
 import './ScenariosTab.css';
 
 interface Props {
@@ -26,13 +27,13 @@ interface ScriptItem {
 
 type Stage = 'competitors' | 'topics' | 'scripts';
 
-export function ScenariosTab({ clientId: _clientId }: Props) {
+export function ScenariosTab({ clientId }: Props) {
   const addToast = useToastStore((s) => s.addToast);
-  const [stage, setStage] = useState<Stage>('competitors');
-  const [competitorLinks, setCompetitorLinks] = useState('');
+  const [stage, setStage] = usePersistedState<Stage>(`hw_scenarios_stage_${clientId}`, 'competitors');
+  const [competitorLinks, setCompetitorLinks] = usePersistedState(`hw_scenarios_links_${clientId}`, '');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [topics, setTopics] = useState<TopicItem[]>([]);
-  const [scripts, setScripts] = useState<ScriptItem[]>([]);
+  const [topics, setTopics] = usePersistedState<TopicItem[]>(`hw_scenarios_topics_${clientId}`, []);
+  const [scripts, setScripts] = usePersistedState<ScriptItem[]>(`hw_scenarios_scripts_${clientId}`, []);
 
   const handleAnalyzeCompetitors = async () => {
     if (!competitorLinks.trim()) {

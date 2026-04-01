@@ -3,9 +3,9 @@
    Светофор + загрузка скриншота + AI разбор
    ============================================ */
 
-import { useState } from 'react';
 import { useToastStore } from '../../../store';
 import { fetchGeminiCompletion } from '../../../utils/geminiApi';
+import { usePersistedState } from '../../../utils/usePersistedState';
 import type { TrafficLightStatus } from '../../../types';
 import './AiAnalysisTab.css';
 
@@ -35,17 +35,20 @@ const statusColors: Record<string, string> = {
   green: '#16A34A',
 };
 
-export function AiAnalysisTab({ clientId: _clientId }: Props) {
+export function AiAnalysisTab({ clientId }: Props) {
   const addToast = useToastStore((s) => s.addToast);
-  const [state, setState] = useState<AnalysisState>({
-    avatar: null,
-    bio: null,
-    highlights: null,
-    feed: null,
-    aiSummary: '',
-    screenshotPreview: null,
-    isAnalyzing: false,
-  });
+  const [state, setState] = usePersistedState<AnalysisState>(
+    `hw_ai_${clientId}`,
+    {
+      avatar: null,
+      bio: null,
+      highlights: null,
+      feed: null,
+      aiSummary: '',
+      screenshotPreview: null,
+      isAnalyzing: false,
+    }
+  );
 
   const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

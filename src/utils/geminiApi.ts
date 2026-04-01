@@ -95,9 +95,20 @@ export const fetchGeminiCompletion = async (messages: any[], model = 'gemini-2.5
     throw new Error('ИИ вернул пустой или некорректный ответ. Проверьте консоль.');
   }
 
-  const content = data.candidates[0]?.content?.parts?.[0]?.text;
+  // Gemini 2.5 — «думающая» модель: parts[0] содержит reasoning (thought: true),
+  // а финальный ответ — в последнем part без флага thought.
+  const parts = data.candidates[0]?.content?.parts;
+  if (!parts || parts.length === 0) {
+    console.error('[Gemini API] Нет parts в ответе:', JSON.stringify(data.candidates[0], null, 2));
+    throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
+  }
+
+  // Берём последний part, у которого нет флага thought (это и есть реальный ответ)
+  const responsePart = [...parts].reverse().find((p: any) => !p.thought && p.text);
+  const content = responsePart?.text;
+
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
-    console.error('[Gemini API] Пустой текст в ответе:', JSON.stringify(data.candidates[0], null, 2));
+    console.error('[Gemini API] Не найден текстовый ответ (все parts — thinking?):', JSON.stringify(parts, null, 2));
     throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
   }
 

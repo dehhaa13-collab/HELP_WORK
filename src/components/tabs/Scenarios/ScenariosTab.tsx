@@ -60,15 +60,19 @@ export function ScenariosTab({ clientId }: Props) {
       const prompt = `Пользователь работает в нише: "${clientNiche}".
 Опиши 3 собирательных образа самых топовых и вирусных конкурентов в этой нише в Instagram на текущий год.
 Какие форматы Reels они делают? Какие фишки используют?
-Ответь кратко, без воды, чисто практические идеи для вдохновения.`;
+Ответь кратко, без воды, чисто практические идеи для вдохновения.
+
+ВЕРНИ ТОЛЬКО ВАЛИДНЫЙ JSON-ОБЪЕКТ:
+{ "analysis": "Здесь твой текст..." }`;
 
       const responseText = await fetchGeminiCompletion(
         [{ role: 'user', content: prompt }], 
         0.7, 
         'gemini-1.5-flash'
       );
-      // Вытаскиваем просто текст (без жесткого JSON)
-      const text = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+      
+      const parsed = extractJsonFromText(responseText) as { analysis?: string };
+      const text = parsed?.analysis || responseText.replace(/```json/g, '').replace(/```/g, '').trim();
       setCompetitors(text);
       addToast('success', 'Анализ завершен', 'ИИ предложил стратегию конкурентов.');
     } catch (error) {

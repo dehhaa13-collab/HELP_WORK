@@ -266,6 +266,11 @@ export const useToastStore = create<ToastState>((set) => ({
     const toast: Toast = { id, type, title, message };
     set((state) => ({ toasts: [...state.toasts, toast] }));
 
+    // Если всплывает красная ошибка, шлем её в Sentry (так как код её уже перехватил)
+    if (type === 'error') {
+      Sentry.captureMessage(`[Toast Error] ${title}: ${message}`, 'error');
+    }
+
     // Автоматическое удаление через 10 секунд
     setTimeout(() => {
       set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));

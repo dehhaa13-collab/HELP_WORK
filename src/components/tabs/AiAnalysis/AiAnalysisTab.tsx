@@ -3,7 +3,7 @@
    Светофор + загрузка скриншота + AI разбор
    ============================================ */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToastStore } from '../../../store';
 import { fetchGeminiCompletion, extractJsonFromText } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
@@ -44,25 +44,65 @@ export function AiAnalysisTab({ clientId }: Props) {
     { avatar: null, bio: null, highlights: null, feed: null, aiSummary: '' }
   );
 
-  /* ── Эфемерное состояние: скриншот (тяжёлый base64) и UI-флаги ── */
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
 
-  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  // Универсальный обработчик файла
+  const processFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
       addToast('error', 'Неверный формат', 'Пожалуйста, загрузите изображение (PNG, JPG, WebP).');
       return;
     }
-
     const reader = new FileReader();
     reader.onload = () => {
       setScreenshotPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
   };
+
+  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  // Drag & drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
+  };
+
+  // Paste (Ctrl+V / Cmd+V) handler
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            processFile(file);
+            break;
+          }
+        }
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, []);
 
   const handleAnalyze = async () => {
     if (!screenshotPreview) {
@@ -214,7 +254,12 @@ export function AiAnalysisTab({ clientId }: Props) {
               </button>
             </div>
           ) : (
-            <label className="ai-upload-area">
+            <label 
+              className={`ai-upload-area ${isDragActive ? 'dragging' : ''}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <input
                 type="file"
                 accept="image/*"
@@ -222,7 +267,7 @@ export function AiAnalysisTab({ clientId }: Props) {
                 className="visually-hidden"
               />
               <div className="ai-upload-icon">📁</div>
-              <span>Нажмите или перетащите файл</span>
+              <span>Нажмите, перетащите или вставьте картинку (Cmd + V)</span>
             </label>
           )}
 

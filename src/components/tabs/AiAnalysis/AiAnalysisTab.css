@@ -34,10 +34,17 @@
   gap: var(--space-3);
 }
 
-.ai-upload-area:hover {
+.ai-upload-area:hover,
+.ai-upload-area.dragging {
   border-color: var(--color-primary);
   background-color: var(--color-primary-light);
   color: var(--color-primary);
+}
+
+.ai-upload-area.dragging {
+  transform: scale(1.02);
+  border-width: 2px;
+  border-style: solid;
 }
 
 .ai-upload-icon {

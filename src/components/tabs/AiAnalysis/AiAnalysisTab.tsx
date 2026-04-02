@@ -8,6 +8,7 @@ import { useToastStore } from '../../../store';
 import { fetchGeminiCompletion, extractJsonFromText } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
 import type { TrafficLightStatus } from '../../../types';
+import heic2any from 'heic2any';
 import './AiAnalysisTab.css';
 
 interface Props {
@@ -47,18 +48,46 @@ export function AiAnalysisTab({ clientId }: Props) {
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
 
-  // Универсальный обработчик файла
-  const processFile = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      addToast('error', 'Неверный формат', 'Пожалуйста, загрузите изображение (PNG, JPG, WebP).');
-      return;
+  // Универсальный обработчик файла с поддержкой HEIC
+  const processFile = async (file: File) => {
+    try {
+      setIsProcessingFile(true);
+      let finalFile = file;
+
+      // Конвертируем HEIC/HEIF с iPhone (Mac/iOS формат) в стандартный JPEG
+      if (
+        file.type === 'image/heic' || 
+        file.type === 'image/heif' || 
+        file.name.toLowerCase().endsWith('.heic')
+      ) {
+        addToast('info', 'Конвертация', 'Адаптируем формат iPhone (HEIC) для ИИ...');
+        const convertedBlob = await heic2any({
+          blob: file,
+          toType: 'image/jpeg',
+          quality: 0.8,
+        }) as Blob;
+        
+        finalFile = new File([convertedBlob], file.name.replace(/\.heic$/i, '.jpg'), { type: 'image/jpeg' });
+      }
+
+      if (!finalFile.type.startsWith('image/')) {
+        addToast('error', 'Неверный формат', 'Пожалуйста, загрузите изображение (PNG, JPG, WebP, HEIC).');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        setScreenshotPreview(reader.result as string);
+      };
+      reader.readAsDataURL(finalFile);
+    } catch (error) {
+      console.error('Ошибка анализа файла:', error);
+      addToast('error', 'Ошибка файла', 'Не удалось прочитать или конвертировать файл.');
+    } finally {
+      setIsProcessingFile(false);
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setScreenshotPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -262,12 +291,16 @@ export function AiAnalysisTab({ clientId }: Props) {
             >
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,.heic,.heif"
                 onChange={handleScreenshotUpload}
                 className="visually-hidden"
               />
-              <div className="ai-upload-icon">📁</div>
-              <span>Нажмите, перетащите или вставьте картинку (Cmd + V)</span>
+              <div className="ai-upload-icon">{isProcessingFile ? '⏳' : '📁'}</div>
+              <span>
+                {isProcessingFile 
+                  ? 'Обработка файла...' 
+                  : 'Нажмите, перетащите или вставьте картинку (Cmd + V)'}
+              </span>
             </label>
           )}
 

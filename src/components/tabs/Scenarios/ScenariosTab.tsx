@@ -22,7 +22,13 @@ interface TopicItem {
 interface ScriptItem {
   id: number;
   topicTitle: string;
-  content: string;
+  content?: string; // Legacy support
+  hook?: string;
+  visuals?: string;
+  body?: string;
+  cta?: string;
+  music?: string;
+  duration?: string;
 }
 
 type Stage = 'competitors' | 'topics' | 'scripts';
@@ -127,17 +133,26 @@ ${competitorLinks}
       const prompt = `Напиши короткие вирусные сценарии Reels для следующих тем:
 ${selectedTitles}
 
-Каждый сценарий должен иметь:
-1. Хук (2 секунды)
-2. Основная часть (15-30 сек)
-3. Призыв к действию (CTA)
-4. Подобранную музыку или тренд
-5. Ожидаемый хронометраж.
+Каждый сценарий должен быть структурирован:
+1. hook (Хук - 2-3 секунды, самая интригующая фраза)
+2. visuals (Что происходит в кадре - визуал, действия, текст на экране)
+3. body (Основная часть диктора - 15-30 сек)
+4. cta (Призыв к действию, подписка/комментарий)
+5. music (Настроение музыки или тренд)
+6. duration (Ожидаемый хронометраж)
 
 ВЕРНИ ТОЛЬКО ВАЛИДНЫЙ JSON-МАССИВ (без блочных кавычек \`\`\`):
 [
-  { "id": 1, "topicTitle": "Тема 1", "content": "Текст сценария в markdown..." },
-  { "id": 2, "topicTitle": "Тема 2", "content": "Текст сценария в markdown..." }
+  { 
+    "id": 1, 
+    "topicTitle": "Название темы", 
+    "hook": "Текст...", 
+    "visuals": "Камера наезжает...", 
+    "body": "Текст...", 
+    "cta": "Подпишись...", 
+    "music": "Динамичная...", 
+    "duration": "15 сек" 
+  }
 ]`;
 
       const responseText = await fetchGeminiCompletion([
@@ -159,8 +174,11 @@ ${selectedTitles}
         throw new Error('ИИ не сгенерировал ни одного сценария. Попробуйте ещё раз.');
       }
 
-      // Проверить что у каждого сценария есть content
-      const emptyScripts = generatedScripts.filter(s => !s.content || typeof s.content !== 'string' || s.content.trim().length < 5);
+      // Проверить что сценарии содержат данные
+      const emptyScripts = generatedScripts.filter(s => 
+        (!s.content || s.content.length < 5) && 
+        (!s.body || s.body.length < 5)
+      );
       if (emptyScripts.length > 0) {
         console.error('[Сценарии] Сценарии без контента:', emptyScripts);
         throw new Error(`ИИ вернул ${emptyScripts.length} пустых сценариев. Попробуйте ещё раз.`);
@@ -169,7 +187,13 @@ ${selectedTitles}
       generatedScripts = generatedScripts.map((s, i) => ({
         id: i + 1,
         topicTitle: s.topicTitle || selectedTopics[i]?.title || `Тема ${i + 1}`,
-        content: s.content
+        content: s.content,
+        hook: s.hook,
+        visuals: s.visuals,
+        body: s.body,
+        cta: s.cta,
+        music: s.music,
+        duration: s.duration
       }));
 
       setScripts(generatedScripts);
@@ -298,12 +322,60 @@ ${selectedTitles}
           {scripts.map((script) => (
             <div key={script.id} className="card script-card">
               <div className="card-body">
-                <h4 className="script-title">Сценарий #{script.id}</h4>
-                <div className="script-content">
-                  {script.content.split('\n').map((line, i) => (
-                    <p key={i}>{line}</p>
-                  ))}
+                <div className="script-actions">
+                  <h4 className="script-title">{script.topicTitle}</h4>
+                  <button 
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => {
+                      const textToCopy = script.content 
+                        ? script.content 
+                        : `Хук: ${script.hook}\n\nВидеоряд: ${script.visuals}\n\nСценарий: ${script.body}\n\nCTA: ${script.cta}`;
+                      navigator.clipboard.writeText(textToCopy);
+                      addToast('success', 'Скопировано', 'Сценарий скопирован в буфер обмена');
+                    }}
+                  >
+                    📋 Копировать
+                  </button>
                 </div>
+                
+                {(!script.hook && script.content) ? (
+                  <div className="script-content">
+                    {script.content.split('\n').map((line, i) => (
+                      <p key={i}>{line}</p>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="script-structured">
+                    {script.hook && (
+                      <div className="script-section">
+                        <span className="script-label">🎣 Хук</span>
+                        <p>{script.hook}</p>
+                      </div>
+                    )}
+                    {script.visuals && (
+                      <div className="script-section">
+                        <span className="script-label">🎬 Обстановка / Видеоряд</span>
+                        <p>{script.visuals}</p>
+                      </div>
+                    )}
+                    {script.body && (
+                      <div className="script-section">
+                        <span className="script-label">🗣 Сценарий / Текст диктора</span>
+                        <p>{script.body}</p>
+                      </div>
+                    )}
+                    {script.cta && (
+                      <div className="script-section">
+                        <span className="script-label">🎯 Призыв (CTA)</span>
+                        <p>{script.cta}</p>
+                      </div>
+                    )}
+                    <div className="script-footer">
+                      <span>🎵 Звук/Музыка: {script.music || 'Любой тренд'}</span>
+                      <span>⏱ Время: {script.duration || '~15 сек'}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}

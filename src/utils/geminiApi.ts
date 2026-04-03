@@ -82,145 +82,82 @@ export const fetchGeminiCompletion = async (
     body.generationConfig.responseSchema = responseSchema;
   }
 
-  // === Multi-Model Fallback Chain ===
-  // If primary model is down (500/503), automatically try backup models
-  const FALLBACK_MODELS = [
-    model,                // Primary (what the caller requested, usually gemini-2.5-flash)
-    'gemini-2.0-flash',   // Stable backup
-    'gemini-2.0-flash-lite', // Lightest, most available
-  ];
-  // Deduplicate in case the caller already requested one of the fallbacks
-  const modelsToTry = [...new Set(FALLBACK_MODELS)];
+  // Прямой вызов Google API (без прокси — просто и надёжно)
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  const maxRetries = 2; // retries per model (reduced since we have fallbacks)
-  const baseDelay = 1500;
-  const timeoutMs = 60_000;
+  const maxRetries = 3;
+  const timeoutMs = 90_000; // 90 секунд (для картинок нужно больше)
   let lastError = '';
 
-  for (let modelIndex = 0; modelIndex < modelsToTry.length; modelIndex++) {
-    const currentModel = modelsToTry[modelIndex];
-    const isFallback = modelIndex > 0;
-    
-    if (isFallback) {
-      console.warn(`[Gemini API] 🔄 Переключаюсь на запасную модель: ${currentModel}`);
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    let response: Response;
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+    } catch (networkError: any) {
+      console.error(`[Gemini] Сетевая ошибка (попытка ${attempt + 1}/${maxRetries + 1}):`, networkError);
+
+      if (attempt === maxRetries) {
+        if (!navigator.onLine) throw new Error('Нет подключения к интернету.');
+        if (networkError.name === 'AbortError') throw new Error('Запрос занял слишком много времени.');
+        throw new Error('Не удалось связаться с ИИ.');
+      }
+
+      await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+      continue;
     }
 
-    // Build URL for this model
-    const currentUrl = import.meta.env.PROD
-      ? `/api/gemini?model=${currentModel}`
-      : `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
+    if (response.ok) {
+      const data = await response.json();
 
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      let response: Response;
-
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-        response = await fetch(currentUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-      } catch (networkError: any) {
-        console.error(`[Gemini API] Сетевая ошибка (${currentModel}, попытка ${attempt + 1}/${maxRetries + 1}):`, networkError);
-
-        if (attempt === maxRetries) {
-          // If we have more models to try, break to outer loop
-          if (modelIndex < modelsToTry.length - 1) {
-            lastError = networkError.message;
-            break;
-          }
-          const isTimeout = networkError.name === 'AbortError';
-          const isOffline = !navigator.onLine;
-          if (isOffline) throw new Error('Нет подключения к интернету. Проверьте Wi-Fi и попробуйте снова.');
-          if (isTimeout) throw new Error('Запрос занял слишком много времени. Проверьте подключение к интернету.');
-          throw new Error('Не удалось связаться с ИИ. Проверьте подключение к интернету.');
-        }
-
-        const delay = Math.min(baseDelay * Math.pow(2, attempt) + Math.random() * 1000, 10000);
-        console.warn(`[Gemini API] ⏳ Повтор через ${Math.round(delay)}мс...`);
-        lastError = networkError.message;
-        await new Promise(r => setTimeout(r, delay));
-        continue;
+      if (!data?.candidates?.[0]?.content?.parts?.length) {
+        throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
       }
 
-      if (response.ok) {
-        const data = await response.json();
+      const parts = data.candidates[0].content.parts;
+      const responsePart = [...parts].reverse().find((p: any) => !p.thought && p.text);
+      const content = responsePart?.text;
 
-        if (!data || !data.candidates || data.candidates.length === 0) {
-          console.error('[Gemini API] Неожиданная структура ответа:', JSON.stringify(data, null, 2));
-          throw new Error('ИИ вернул пустой или некорректный ответ. Проверьте консоль.');
-        }
-
-        const parts = data.candidates[0]?.content?.parts;
-        if (!parts || parts.length === 0) {
-          console.error('[Gemini API] Нет parts в ответе:', JSON.stringify(data.candidates[0], null, 2));
-          throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
-        }
-
-        const responsePart = [...parts].reverse().find((p: any) => !p.thought && p.text);
-        const content = responsePart?.text;
-
-        if (!content || typeof content !== 'string' || content.trim().length === 0) {
-          console.error('[Gemini API] Не найден текстовый ответ:', JSON.stringify(parts, null, 2));
-          throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
-        }
-
-        if (isFallback) {
-          console.info(`[Gemini API] ✅ Запасная модель ${currentModel} сработала!`);
-        }
-
-        return content;
+      if (!content?.trim()) {
+        throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
       }
 
-      // --- HTTP error ---
-      const errorMsg = await response.text();
-      console.error(`[Gemini API] HTTP ${response.status} (${currentModel}, попытка ${attempt + 1}/${maxRetries + 1}):`, errorMsg);
-
-      let parsedErr = '';
-      try {
-        const j = JSON.parse(errorMsg);
-        parsedErr = j.error?.message || j.message || errorMsg;
-      } catch {
-        parsedErr = errorMsg;
-      }
-
-      const isRetryable = response.status === 429 || response.status >= 500;
-      const isModelDown = response.status >= 500; // 500/502/503 = model is down
-
-      // If model is down and we have fallbacks, don't waste more retries on this model
-      if (isModelDown && modelIndex < modelsToTry.length - 1) {
-        console.warn(`[Gemini API] 💀 Модель ${currentModel} вернула ${response.status}, переключаюсь на запасную...`);
-        lastError = parsedErr;
-        break; // Break inner loop, go to next model
-      }
-
-      if (!isRetryable || attempt === maxRetries) {
-        // Last model, last attempt
-        if (modelIndex < modelsToTry.length - 1) {
-          lastError = parsedErr;
-          break;
-        }
-        const prefix = `Ошибка после всех попыток`;
-        throw new Error(`${prefix} (HTTP ${response.status}): ${humanizeError(response.status, parsedErr)}`);
-      }
-
-      const retryAfterHeader = response.headers.get('Retry-After');
-      const delay = retryAfterHeader
-        ? parseFloat(retryAfterHeader) * 1000
-        : Math.min(baseDelay * Math.pow(2, attempt) + Math.random() * 1000, 10000);
-
-      console.warn(`[Gemini API] ⏳ Повтор через ${Math.round(delay)}мс...`);
-      lastError = parsedErr;
-      await new Promise(r => setTimeout(r, delay));
+      return content;
     }
+
+    // --- Ошибка ---
+    const errorText = await response.text();
+    let parsedErr = errorText;
+    try { parsedErr = JSON.parse(errorText).error?.message || errorText; } catch {}
+
+    const canRetry = response.status === 429 || response.status >= 500;
+
+    if (!canRetry || attempt === maxRetries) {
+      throw new Error(`Ошибка ИИ (${response.status}): ${humanizeError(response.status, parsedErr)}`);
+    }
+
+    // 429 = rate limit → ждём дольше (15-30 секунд)
+    // 500+ = сервер упал → ждём 3-6 секунд
+    const delay = response.status === 429
+      ? 15000 + Math.random() * 15000  // 15-30 сек при rate limit
+      : 3000 * (attempt + 1);           // 3, 6, 9 сек при 500
+
+    console.warn(`[Gemini] Повтор через ${Math.round(delay / 1000)}с (${response.status})...`);
+    lastError = parsedErr;
+    await new Promise(r => setTimeout(r, delay));
   }
 
-  throw new Error(`Все модели ИИ временно недоступны. Последняя ошибка: ${lastError.substring(0, 100)}`);
+  throw new Error(`ИИ недоступен. ${lastError.substring(0, 100)}`);
 }
 
 /**

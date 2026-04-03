@@ -72,16 +72,47 @@ export const fetchGeminiCompletion = async (
     temperature: temperature,
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
+  const maxRetries = 3;
+  const baseDelay = 1500;
+  let lastError = '';
 
-  if (!response.ok) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (response.ok) {
+      // Успех — переходим к парсингу ответа ниже
+      const data = await response.json();
+
+      if (!data || !data.candidates || data.candidates.length === 0) {
+        console.error('[Gemini API] Неожиданная структура ответа:', JSON.stringify(data, null, 2));
+        throw new Error('ИИ вернул пустой или некорректный ответ. Проверьте консоль.');
+      }
+
+      const parts = data.candidates[0]?.content?.parts;
+      if (!parts || parts.length === 0) {
+        console.error('[Gemini API] Нет parts в ответе:', JSON.stringify(data.candidates[0], null, 2));
+        throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
+      }
+
+      const responsePart = [...parts].reverse().find((p: any) => !p.thought && p.text);
+      const content = responsePart?.text;
+
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        console.error('[Gemini API] Не найден текстовый ответ:', JSON.stringify(parts, null, 2));
+        throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
+      }
+
+      return content;
+    }
+
+    // --- Ошибка ---
     const errorMsg = await response.text();
-    console.error(`[Gemini API] HTTP ${response.status}:`, errorMsg);
-    
+    console.error(`[Gemini API] HTTP ${response.status} (попытка ${attempt + 1}/${maxRetries + 1}):`, errorMsg);
+
     let parsedErr = '';
     try {
       const j = JSON.parse(errorMsg);
@@ -89,36 +120,48 @@ export const fetchGeminiCompletion = async (
     } catch {
       parsedErr = errorMsg;
     }
+
+    // Ретраим только 429 (rate limit) и 5xx (серверные ошибки)
+    const isRetryable = response.status === 429 || response.status >= 500;
     
-    throw new Error(`Ошибка Gemini API (HTTP ${response.status}): ${parsedErr.substring(0, 150)}`);
+    if (!isRetryable || attempt === maxRetries) {
+      // Не ретраим — или все попытки исчерпаны
+      const prefix = attempt > 0 
+        ? `Ошибка после ${attempt + 1} попыток` 
+        : 'Ошибка Gemini API';
+      throw new Error(`${prefix} (HTTP ${response.status}): ${humanizeError(response.status, parsedErr)}`);
+    }
+
+    // Подсчёт задержки: Retry-After от API или экспоненциальный backoff + jitter
+    const retryAfterHeader = response.headers.get('Retry-After');
+    const delay = retryAfterHeader
+      ? parseFloat(retryAfterHeader) * 1000
+      : Math.min(baseDelay * Math.pow(2, attempt) + Math.random() * 1000, 15000);
+
+    console.warn(`[Gemini API] ⏳ Повтор через ${Math.round(delay)}мс...`);
+    lastError = parsedErr;
+    await new Promise(r => setTimeout(r, delay));
   }
 
-  const data = await response.json();
+  throw new Error(`Все ${maxRetries + 1} попыток исчерпаны. Последняя ошибка: ${lastError.substring(0, 100)}`);
+}
 
-  if (!data || !data.candidates || data.candidates.length === 0) {
-    console.error('[Gemini API] Неожиданная структура ответа:', JSON.stringify(data, null, 2));
-    throw new Error('ИИ вернул пустой или некорректный ответ. Проверьте консоль.');
-  }
+/**
+ * Перевод технических ошибок API в понятные сообщения для пользователя
+ */
+function humanizeError(status: number, raw: string): string {
+  if (status === 429 || raw.includes('quota'))
+    return 'ИИ перегружен. Подождите минуту и попробуйте снова.';
+  if (status === 404)
+    return 'Модель ИИ временно недоступна.';
+  if (status >= 500)
+    return 'Серверы ИИ временно недоступны. Попробуйте через пару минут.';
+  if (raw.includes('network') || raw.includes('Failed to fetch'))
+    return 'Нет подключения к интернету.';
+  return raw.substring(0, 150);
+}
 
-  // Gemini 2.5 — «думающая» модель: parts[0] содержит reasoning (thought: true),
-  // а финальный ответ — в последнем part без флага thought.
-  const parts = data.candidates[0]?.content?.parts;
-  if (!parts || parts.length === 0) {
-    console.error('[Gemini API] Нет parts в ответе:', JSON.stringify(data.candidates[0], null, 2));
-    throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
-  }
 
-  // Берём последний part, у которого нет флага thought (это и есть реальный ответ)
-  const responsePart = [...parts].reverse().find((p: any) => !p.thought && p.text);
-  const content = responsePart?.text;
-
-  if (!content || typeof content !== 'string' || content.trim().length === 0) {
-    console.error('[Gemini API] Не найден текстовый ответ (все parts — thinking?):', JSON.stringify(parts, null, 2));
-    throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
-  }
-
-  return content;
-};
 
 /**
  * Агрессивная экстракция JSON из текста ИИ.

@@ -12,6 +12,7 @@ interface Props {
 
 interface TargetItem {
   id: number;
+  name: string;
   isPromoted: boolean;
   results: string;
   campaignFinished: boolean;
@@ -22,6 +23,7 @@ export function TargetingTab({ clientId }: Props) {
     `hw_targeting_${clientId}`,
     Array.from({ length: 10 }, (_, i) => ({
       id: i + 1,
+      name: '',
       isPromoted: false,
       results: '',
       campaignFinished: false,
@@ -48,6 +50,14 @@ export function TargetingTab({ clientId }: Props) {
     setItems((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, results } : item
+      )
+    );
+  };
+
+  const updateName = (id: number, name: string) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, name } : item
       )
     );
   };
@@ -98,7 +108,13 @@ export function TargetingTab({ clientId }: Props) {
               >
                 <div className="targeting-item-header">
                   <span className="editing-num-badge">{item.id}</span>
-                  <span className="targeting-pub-label">Публикация #{item.id}</span>
+                  <input
+                    type="text"
+                    className="input targeting-name-input"
+                    placeholder={`Публикация #${item.id}`}
+                    value={item.name || ''}
+                    onChange={(e) => updateName(item.id, e.target.value)}
+                  />
                   <div className="targeting-item-toggles">
                     <label className="editing-checkbox">
                       <input

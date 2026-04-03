@@ -72,6 +72,24 @@
   flex: 1;
 }
 
+.targeting-name-input {
+  flex: 1;
+  border: none;
+  border-bottom: 1px dashed var(--color-border);
+  background: transparent;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  padding: var(--space-1) var(--space-2);
+  border-radius: 0;
+  transition: border-color var(--transition-fast);
+}
+
+.targeting-name-input:focus {
+  border-bottom-color: var(--color-primary);
+  outline: none;
+  background: var(--color-bg);
+}
+
 .targeting-item-toggles {
   display: flex;
   gap: var(--space-4);

@@ -162,7 +162,8 @@
 
 .workspace-tab-content {
   padding: var(--space-6) var(--space-8);
-  max-width: 1000px;
+  max-width: 1600px; /* Expanded for full desktop monitor usage */
+  margin: 0 auto;
 }
 
 /* ===== Mobile Header (hidden on desktop) ===== */

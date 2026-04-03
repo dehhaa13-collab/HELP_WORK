@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useToastStore } from '../../../store';
 import { fetchGeminiCompletion, extractJsonFromText } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
+import { exportScriptsToPDF, exportContentPlanPDF, exportContentPlanCSV } from '../../../utils/exportUtils';
 import './ScenariosTab.css';
 
 interface Props {
@@ -43,6 +44,14 @@ export function ScenariosTab({ clientId }: Props) {
   // AI Options
   const [aiTone, setAiTone] = usePersistedState(`hw_ai_tone_${clientId}`, 'expert');
   const [aiFormat, setAiFormat] = usePersistedState(`hw_ai_format_${clientId}`, 'talking_head');
+
+  // Cross-tab data for exports
+  const [formatSlots] = usePersistedState<{ id: number; format: 'reels' | 'post' | 'carousel' | null }[]>(
+    `hw_formats_slots_${clientId}`, []
+  );
+  const [targetItems] = usePersistedState<{ id: number; name: string }[]>(
+    `hw_targeting_${clientId}`, []
+  );
 
   // --- Loading States ---
   const [isGeneratingCompetitors, setIsGeneratingCompetitors] = useState(false);
@@ -356,7 +365,18 @@ ${selectedTitles}
       {/* 5. ИТОГОВЫЕ СЦЕНАРИИ */}
       {scripts.length > 0 && (
         <div className="scenarios-scripts">
-          <h3 className="ai-section-title" style={{ marginTop: '1rem' }}>📦 Сохраненные сценарии ({scripts.length})</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', marginBottom: '1rem' }}>
+            <h3 className="ai-section-title" style={{ margin: 0 }}>📦 Сохраненные сценарии ({scripts.length})</h3>
+            <button 
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                exportScriptsToPDF(scripts, clientNiche);
+                addToast('success', 'Экспорт', 'PDF откроется в новом окне');
+              }}
+            >
+              📄 Скачать PDF
+            </button>
+          </div>
           
           {scripts.map((script) => (
             <div key={script.id} className="card script-card">
@@ -421,6 +441,46 @@ ${selectedTitles}
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {/* 6. ЭКСПОРТ КОНТЕНТ-ПЛАНА */}
+      {(formatSlots.length > 0 || scripts.length > 0) && (
+        <div className="card">
+          <div className="card-body">
+            <h3 className="ai-section-title">📥 Экспорт контент-плана</h3>
+            <p className="ai-section-desc">Скачайте готовый контент-план с форматами, названиями и темами.</p>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+              <button 
+                className="btn btn-primary"
+                onClick={() => {
+                  exportContentPlanPDF(formatSlots, targetItems, topics);
+                  addToast('success', 'PDF', 'Контент-план откроется в новом окне');
+                }}
+              >
+                📋 Контент-план (PDF)
+              </button>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => {
+                  exportContentPlanCSV(formatSlots, targetItems, topics);
+                  addToast('success', 'CSV', 'Файл скачан — откройте в Google Sheets или Excel');
+                }}
+              >
+                📊 Контент-план (CSV)
+              </button>
+              {scripts.length > 0 && (
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    exportScriptsToPDF(scripts, clientNiche);
+                    addToast('success', 'PDF', 'Сценарии откроются в новом окне');
+                  }}
+                >
+                  📝 Все сценарии (PDF)
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

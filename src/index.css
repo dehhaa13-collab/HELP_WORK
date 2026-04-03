@@ -507,6 +507,24 @@ select.input:hover {
   background: var(--color-text-muted);
 }
 
+/* === Global Skeleton Loader (available on ALL pages) === */
+.magic-skeleton {
+  background: linear-gradient(90deg, var(--color-bg) 25%, var(--color-border) 50%, var(--color-bg) 75%);
+  background-size: 200% 100%;
+  animation: magic-shimmer 1.8s infinite ease-in-out;
+  border-radius: var(--radius-md);
+}
+
+.magic-skeleton-text {
+  height: 14px;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes magic-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* === Responsive === */
 @media (max-width: 768px) {
   :root {

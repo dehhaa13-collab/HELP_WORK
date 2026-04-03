@@ -288,10 +288,8 @@
 }
 
 .kanban-column {
-  flex: 0 0 auto;
-  min-width: 280px;
-  width: 280px;
-  max-width: 100%;
+  flex: 1 1 0;
+  min-width: 200px;
   background: rgba(0, 0, 0, 0.02);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -389,11 +387,22 @@
   .topic-item {
     padding: var(--space-3);
   }
+
+  /* On mobile: horizontal scroll the Kanban */
+  .kanban-board {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .kanban-column {
+    flex: 0 0 260px;
+    min-width: 260px;
+  }
 }
 
 /* === Content Factory Independent Blocks === */
 .content-factory {
-  max-width: 800px;
+  max-width: none; /* Allow full width on desktop for Kanban */
   margin: 0 auto;
 }
 

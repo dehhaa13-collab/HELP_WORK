@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useToastStore } from '../../../store';
 import { fetchGeminiCompletion, fetchGeminiWithSchema } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
+import { exportScriptsToWord } from '../../../utils/exportUtils';
 import './ScenariosTab.css';
 
 interface Props {
@@ -443,12 +444,55 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
       </AnimatePresence>
 
       {!isGeneratingScripts && scripts.length > 0 && (
-        <div className="card mt-4">
-          <div className="card-body" style={{ textAlign: 'center' }}>
-             <h3 className="ai-section-title">✅ Сценарии сгенерированы!</h3>
-             <p className="ai-section-desc">Они автоматически перенесены в вашу общую Канбан-доску на главной вкладке <b>"Дашборд"</b>.</p>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card mt-4">
+          <div className="card-body">
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+               <div>
+                 <h3 className="ai-section-title" style={{ margin: 0 }}>✅ Сценарии готовы!</h3>
+                 <p className="ai-section-desc" style={{ margin: 0 }}>Они также сохранены в вашу Канбан-доску во вкладке "Дашборд".</p>
+               </div>
+               <button 
+                 className="btn btn-primary"
+                 onClick={() => {
+                   exportScriptsToWord(scripts);
+                   addToast('success', 'Экспорт', 'Файл .docx скачивается...');
+                 }}
+               >
+                 📄 Скачать сценарии (Word)
+               </button>
+             </div>
+
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+               {scripts.slice(0, 5).map(script => (
+                 <div key={script.id} style={{ padding: '1rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-bg)' }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                     <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--color-text)' }}>{script.topicTitle}</h4>
+                     <button 
+                       className="btn btn-ghost btn-sm"
+                       onClick={() => {
+                         const text = `Хук: ${script.hook}\nВидеоряд: ${script.visuals}\nСценарий: ${script.body}\nCTA: ${script.cta}`;
+                         navigator.clipboard.writeText(text);
+                         addToast('success', 'Скопировано', 'Текст скопирован в буфер обмена');
+                       }}
+                     >
+                       📋 Копировать
+                     </button>
+                   </div>
+                   <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                     <div><b>Хук:</b> {script.hook}</div>
+                     <div><b>Сценарий:</b> {script.body}</div>
+                     {script.cta && <div><b>CTA:</b> {script.cta}</div>}
+                   </div>
+                 </div>
+               ))}
+               {scripts.length > 5 && (
+                 <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>
+                   И еще {scripts.length - 5} сценариев... Посмотреть всё можно во вкладке "Дашборд".
+                 </p>
+               )}
+             </div>
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   );

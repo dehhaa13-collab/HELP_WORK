@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore, useClientStore, useToastStore } from '../../store';
 import { useClients, useAddClient, useUpdateClient, useRemoveClient } from '../../hooks/useClients';
 import { PIPELINE_STAGES } from '../../types';
-import type { Client, PipelineStage } from '../../types';
+import type { Client } from '../../types';
+import { computeClientStage } from '../../utils/computeStage';
 import './Dashboard.css';
 
 export function Dashboard() {
@@ -15,6 +16,15 @@ export function Dashboard() {
   const { mutateAsync: addClient, isPending: isAddingClient } = useAddClient();
   const { mutateAsync: removeClient } = useRemoveClient();
   const { mutateAsync: updateClient } = useUpdateClient();
+
+  // Счётчик для принудительного пересчёта этапов при возврате на Dashboard
+  const [, forceUpdate] = useState(0);
+  useEffect(() => {
+    // Пересчитываем этапы каждый раз, когда Dashboard получает фокус
+    const onFocus = () => forceUpdate(n => n + 1);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
@@ -81,41 +91,7 @@ export function Dashboard() {
     }
   };
 
-  // === Advance stage (forward) ===
-  const handleAdvanceStage = async (e: React.MouseEvent, client: Client) => {
-    e.stopPropagation();
-    const currentIndex = PIPELINE_STAGES.findIndex((s) => s.key === client.pipelineStage);
-    if (currentIndex >= PIPELINE_STAGES.length - 1) {
-      addToast('info', 'Последний этап', `${client.name} уже на финальном этапе «Продление».`);
-      return;
-    }
-    try {
-      const nextStage = PIPELINE_STAGES[currentIndex + 1];
-      await updateClient({ id: client.id, updates: { pipelineStage: nextStage.key as PipelineStage } });
-      addToast('success', 'Этап обновлён', `${client.name} переведён на этап «${nextStage.emoji} ${nextStage.label}».`);
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
-      addToast('error', 'Ошибка обновления', errMsg);
-    }
-  };
-
-  // === Go back one stage ===
-  const handlePrevStage = async (e: React.MouseEvent, client: Client) => {
-    e.stopPropagation();
-    const currentIndex = PIPELINE_STAGES.findIndex((s) => s.key === client.pipelineStage);
-    if (currentIndex <= 0) {
-      addToast('info', 'Первый этап', `${client.name} уже на начальном этапе «Встреча».`);
-      return;
-    }
-    try {
-      const prevStage = PIPELINE_STAGES[currentIndex - 1];
-      await updateClient({ id: client.id, updates: { pipelineStage: prevStage.key as PipelineStage } });
-      addToast('success', 'Этап обновлён', `${client.name} возвращён на этап «${prevStage.emoji} ${prevStage.label}».`);
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
-      addToast('error', 'Ошибка обновления', errMsg);
-    }
-  };
+  // Этапы теперь вычисляются автоматически из прогресса по вкладкам
 
   // === Inline name editing ===
   const startEditName = (e: React.MouseEvent, client: Client) => {
@@ -140,8 +116,10 @@ export function Dashboard() {
   };
 
   const getStageInfo = (client: Client) => {
-    const stage = PIPELINE_STAGES.find((s) => s.key === client.pipelineStage);
-    const index = PIPELINE_STAGES.findIndex((s) => s.key === client.pipelineStage);
+    // Авто-расчёт этапа из реального прогресса
+    const computedStage = computeClientStage(client.id);
+    const stage = PIPELINE_STAGES.find((s) => s.key === computedStage);
+    const index = PIPELINE_STAGES.findIndex((s) => s.key === computedStage);
     return { stage, index, total: PIPELINE_STAGES.length };
   };
 
@@ -224,8 +202,6 @@ export function Dashboard() {
             {clients.map((client) => {
               const { stage, index, total } = getStageInfo(client);
               const progress = ((index + 1) / total) * 100;
-              const isLastStage = index >= total - 1;
-              const isFirstStage = index <= 0;
               const isEditing = editingClientId === client.id;
 
               return (
@@ -312,34 +288,17 @@ export function Dashboard() {
                       </div>
                     </div>
 
-                    {/* Actions — with back/forward stage buttons */}
+                    {/* Actions */}
                     <div className="client-card-actions">
                       <button
-                        className="btn btn-secondary btn-sm"
+                        className="btn btn-primary btn-sm"
                         onClick={(e) => { e.stopPropagation(); selectClient(client.id); }}
                       >
-                        Открыть
+                        Открыть →
                       </button>
-                      <div className="stage-nav-buttons">
-                        {!isFirstStage && (
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            onClick={(e) => handlePrevStage(e, client)}
-                            title="Предыдущий этап"
-                          >
-                            ← Назад
-                          </button>
-                        )}
-                        {!isLastStage && (
-                          <button
-                            className="btn btn-primary btn-sm"
-                            onClick={(e) => handleAdvanceStage(e, client)}
-                            title="Следующий этап"
-                          >
-                            Далее →
-                          </button>
-                        )}
-                      </div>
+                      <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                        Этап обновляется автоматически
+                      </span>
                     </div>
                   </div>
                 </div>

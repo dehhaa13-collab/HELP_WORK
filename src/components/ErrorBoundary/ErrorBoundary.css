@@ -1,0 +1,47 @@
+/* ErrorBoundary — стили */
+
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  min-height: 300px;
+  animation: errorFadeIn 0.3s ease;
+}
+
+@keyframes errorFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.error-boundary-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+  animation: errorShake 0.5s ease;
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-8deg); }
+  40% { transform: rotate(8deg); }
+  60% { transform: rotate(-4deg); }
+  80% { transform: rotate(4deg); }
+}
+
+.error-boundary-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+.error-boundary-message {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  max-width: 400px;
+  margin-bottom: var(--space-5);
+  line-height: 1.5;
+  word-break: break-word;
+}

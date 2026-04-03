@@ -12,6 +12,7 @@ import { ScenariosTab } from '../../components/tabs/Scenarios/ScenariosTab';
 import { EditingTab } from '../../components/tabs/Editing/EditingTab';
 import { TargetingTab } from '../../components/tabs/Targeting/TargetingTab';
 import { FeedbackTab } from '../../components/tabs/Feedback/FeedbackTab';
+import { ErrorBoundary } from '../../components/ErrorBoundary/ErrorBoundary';
 import './ClientWorkspace.css';
 
 type TabKey = 'ai-analysis' | 'formats' | 'scenarios' | 'editing' | 'targeting' | 'feedback';
@@ -128,7 +129,12 @@ export function ClientWorkspace() {
           </h2>
         </div>
         <div className="workspace-tab-content">
-          {renderTab()}
+          <ErrorBoundary
+            key={activeTab}
+            section={TABS.find((t) => t.key === activeTab)?.label}
+          >
+            {renderTab()}
+          </ErrorBoundary>
         </div>
       </main>
 

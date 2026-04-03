@@ -4,7 +4,7 @@
    - CSV для контент-плана
    ============================================ */
 
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, ShadingType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, ShadingType, Table, TableRow, TableCell, WidthType, PageBreak } from 'docx';
 import { saveAs } from 'file-saver';
 
 interface ScriptItem {
@@ -34,101 +34,117 @@ const FORMAT_LABELS: Record<string, string> = {
   carousel: 'Карусель',
 };
 
-// =======================================
-// WORD EXPORT — Сценарии
-// =======================================
-
-/**
- * Генерирует .docx файл с темами и сценариями.
- * Чисто и минималистично: тема → хук → сценарий → CTA
- */
 export async function exportScriptsToWord(scripts: ScriptItem[]) {
   if (scripts.length === 0) return;
 
-  const children: Paragraph[] = [];
+  const children: (Paragraph | Table)[] = [];
 
+  // ==========================
+  // COVER PAGE
+  // ==========================
+  children.push(
+    new Paragraph({
+      spacing: { before: 2000, after: 400 },
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({
+          text: 'КОНТЕНТ-СТРАТЕГІЯ ТА СЦЕНАРІЇ',
+          size: 64,
+          bold: true,
+          color: '1a1a2e',
+        }),
+      ],
+    }),
+    new Paragraph({
+      spacing: { after: 3000 },
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({
+          text: 'Сгенеровано за допомогою Content Factory',
+          size: 28,
+          color: '6366F1', // Primary color
+        }),
+      ],
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({
+          text: new Date().toLocaleDateString('uk-UA'),
+          size: 24,
+          color: '888888',
+        }),
+      ],
+    }),
+    new Paragraph({ children: [new PageBreak()] })
+  );
+
+  // ==========================
+  // SCRIPTS
+  // ==========================
   scripts.forEach((script, index) => {
-    // Разделитель между сценариями (кроме первого)
-    if (index > 0) {
-      children.push(
-        new Paragraph({ spacing: { before: 200 } }),
-        new Paragraph({
-          border: {
-            bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC', space: 1 }
-          },
-          spacing: { after: 300 },
-        })
-      );
-    }
-
-    // Номер + Тема
+    // ЗАГОЛОВОК СЦЕНАРИЯ
     children.push(
       new Paragraph({
         heading: HeadingLevel.HEADING_1,
-        spacing: { before: 100, after: 120 },
+        spacing: { before: 400, after: 200 },
         children: [
-          new TextRun({
-            text: `${index + 1}. `,
-            color: '999999',
-            size: 28,
-          }),
-          new TextRun({
-            text: script.topicTitle,
-            bold: true,
-            size: 28,
-            color: '1a1a2e',
-          }),
+          new TextRun({ text: `Сценарій ${index + 1}: `, color: '6366F1', size: 32, bold: true }),
+          new TextRun({ text: script.topicTitle, color: '1a1a2e', size: 32, bold: true }),
         ],
       })
     );
 
-    // Хук
+    // ТАБЛИЦА С КОНТЕНТОМ
+    const tableRows = [];
+
+    // ХУК
     if (script.hook) {
-      children.push(
-        createLabel('Хук'),
-        createBodyText(script.hook),
-      );
+      tableRows.push(createTableRow('ХУК (2-3 сек)', script.hook, 'F0F0FF'));
     }
-
-    // Видеоряд
+    // ВИЗУАЛ
     if (script.visuals) {
-      children.push(
-        createLabel('Видеоряд'),
-        createBodyText(script.visuals),
-      );
+      tableRows.push(createTableRow('В КАДРІ', script.visuals, 'FFFFFF'));
     }
-
-    // Сценарий (основной текст)
+    // ТЕКСТ / СЦЕНАРИЙ
     if (script.body) {
-      children.push(
-        createLabel('Сценарий'),
-        createBodyText(script.body),
-      );
+      tableRows.push(createTableRow('ТЕКСТ РОЛИКУ', script.body, 'F8F9FA'));
     }
-
     // CTA
     if (script.cta) {
-      children.push(
-        createLabel('Призыв к действию'),
-        createBodyText(script.cta),
-      );
+      tableRows.push(createTableRow('CTA (ДІЯ)', script.cta, 'FFFFFF'));
     }
 
-    // Метаданные (звук + время) — серым мелким текстом
-    const metaParts: string[] = [];
-    if (script.music) metaParts.push(`Звук: ${script.music}`);
-    if (script.duration) metaParts.push(`Хронометраж: ${script.duration}`);
+    const scriptTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+        bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+        left: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+        right: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+        insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+      },
+      rows: tableRows,
+    });
+
+    children.push(scriptTable);
+
+    // МЕТАДАННЫЕ
+    const metaParts = [];
+    if (script.music) metaParts.push(`🎵 Музика: ${script.music}`);
+    if (script.duration) metaParts.push(`⏱ Хронометраж: ${script.duration}`);
+    
     if (metaParts.length > 0) {
       children.push(
         new Paragraph({
-          spacing: { before: 160, after: 40 },
+          spacing: { before: 200, after: 400 },
           children: [
             new TextRun({
-              text: metaParts.join('  •  '),
-              size: 18,
-              color: '999999',
+              text: metaParts.join('   |   '),
+              size: 20,
+              color: '888888',
               italics: true,
-            }),
+            })
           ],
         })
       );
@@ -139,25 +155,52 @@ export async function exportScriptsToWord(scripts: ScriptItem[]) {
     styles: {
       default: {
         document: {
-          run: {
-            font: 'Calibri',
-            size: 22,
-          },
+          run: { font: 'Arial', size: 22, color: '333333' },
         },
       },
     },
     sections: [{
       properties: {
-        page: {
-          margin: { top: 1000, right: 1000, bottom: 1000, left: 1000 },
-        },
+        page: { margin: { top: 1000, right: 1000, bottom: 1000, left: 1000 } },
       },
       children,
     }],
   });
 
   const blob = await Packer.toBlob(doc);
-  saveAs(blob, `Сценарии.docx`);
+  saveAs(blob, `Контент_стратегія_${new Date().toISOString().slice(0,10)}.docx`);
+}
+
+// Helper для создания строк таблицы с отступами и шрифтами
+function createTableRow(label: string, content: string, bgColor: string): TableRow {
+  return new TableRow({
+    children: [
+      new TableCell({
+        width: { size: 25, type: WidthType.PERCENTAGE },
+        shading: { type: ShadingType.SOLID, color: bgColor },
+        margins: { top: 200, bottom: 200, left: 200, right: 200 },
+        children: [
+          new Paragraph({
+            children: [
+              new TextRun({ text: label, bold: true, color: '1a1a2e', size: 20 })
+            ]
+          })
+        ]
+      }),
+      new TableCell({
+        width: { size: 75, type: WidthType.PERCENTAGE },
+        margins: { top: 200, bottom: 200, left: 200, right: 200 },
+        children: [
+          new Paragraph({
+            alignment: AlignmentType.JUSTIFIED,
+            children: [
+              new TextRun({ text: content, size: 22 })
+            ]
+          })
+        ]
+      })
+    ]
+  });
 }
 
 // =======================================
@@ -198,36 +241,3 @@ export function exportContentPlanCSV(
   saveAs(blob, `Контент-план.csv`);
 }
 
-// =======================================
-// Helpers
-// =======================================
-
-function createLabel(text: string): Paragraph {
-  return new Paragraph({
-    spacing: { before: 200, after: 40 },
-    children: [
-      new TextRun({
-        text: text.toUpperCase(),
-        bold: true,
-        size: 18,
-        color: '6366F1',
-        allCaps: true,
-      }),
-    ],
-  });
-}
-
-function createBodyText(text: string): Paragraph {
-  return new Paragraph({
-    spacing: { after: 80 },
-    alignment: AlignmentType.JUSTIFIED,
-    shading: { type: ShadingType.SOLID, color: 'F8F9FA' },
-    children: [
-      new TextRun({
-        text,
-        size: 22,
-        color: '333333',
-      }),
-    ],
-  });
-}

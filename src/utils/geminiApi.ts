@@ -15,7 +15,7 @@ export const getGeminiKey = () => {
 export const fetchGeminiCompletion = async (
   messages: any[], 
   temperature = 0.7, 
-  model = 'gemini-2.0-flash',
+  model = 'gemini-2.5-flash',
   responseMimeType: 'application/json' | 'text/plain' = 'application/json'
 ) => {
   const apiKey = getGeminiKey();

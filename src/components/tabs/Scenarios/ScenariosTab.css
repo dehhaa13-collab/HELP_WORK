@@ -267,13 +267,31 @@
   display: flex;
   gap: var(--space-4);
   overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: var(--space-4);
+  padding-top: 4px;
   align-items: flex-start;
+  /* Make a nice custom scrollbar for horizontal scrolling inside cards */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.kanban-board::-webkit-scrollbar {
+  height: 8px;
+}
+.kanban-board::-webkit-scrollbar-track {
+  background: transparent;
+}
+.kanban-board::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 4px;
 }
 
 .kanban-column {
-  min-width: 320px;
-  max-width: 350px;
+  flex: 0 0 auto;
+  min-width: 280px;
+  width: 280px;
+  max-width: 100%;
   background: rgba(0, 0, 0, 0.02);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);

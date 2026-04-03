@@ -245,3 +245,54 @@ export function extractJsonFromText(raw: string): any {
   console.error('[extractJsonFromText] Не удалось извлечь JSON из:', raw.substring(0, 500));
   throw new Error('ИИ вернул ответ в неверном формате. Попробуйте ещё раз.');
 }
+
+import { z } from 'zod';
+
+export async function fetchGeminiWithSchema<T>(
+  messages: any[],
+  schema: z.ZodType<T>,
+  temperature = 0.7,
+  model = 'gemini-2.5-flash'
+): Promise<T> {
+  const maxRetries = 2; // До 3 попыток исправить свои галлюцинации
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    // 1. Запрашиваем текст от ИИ
+    const textResponse = await fetchGeminiCompletion(messages, temperature, model);
+
+    let rawJson: any;
+    try {
+      // 2. Пытаемся извлечь JSON
+      rawJson = extractJsonFromText(textResponse);
+    } catch (e: any) {
+      if (attempt === maxRetries) throw new Error('ИИ не смог выдать структуру JSON даже после 3 попыток.');
+      
+      // Auto-Correction Prompt
+      messages.push({ role: 'model', content: textResponse });
+      messages.push({ role: 'user', content: 'ОШИБКА: Твой ответ не является валидным JSON-объектом/массивом или ты обернул его неверно. Выведи строго чистый JSON без объяснений!' });
+      console.warn(`[Gemini Self-Correction] JSON Extract Error (попытка ${attempt + 1}). Просим ИИ исправиться...`);
+      continue;
+    }
+
+    // 3. Строгая валидация Zod
+    const result = schema.safeParse(rawJson);
+    if (result.success) {
+      return result.data; // Идеальный результат с первого или последующего раза
+    } else {
+      if (attempt === maxRetries) {
+        throw new Error('ИИ не справился с форматом данных. Попробуйте еще раз.');
+      }
+      
+      // Генерируем читаемую ошибку для самого ИИ
+      const errorStr = result.error.issues.map(i => `'${i.path.join('.')}' -> ${i.message}`).join('; ');
+      
+      // Подсказываем ИИ, что конкретно он сделал не так
+      messages.push({ role: 'model', content: JSON.stringify(rawJson) });
+      messages.push({ role: 'user', content: `ОШИБКА АРХИТЕКТУРЫ: Твой JSON не прошёл проверку схемы. Заполни пропущенные поля или исправь типы: ${errorStr}\nПожалуйста, сгенерируй исправленный JSON-ответ.` });
+      
+      console.warn(`[Gemini Self-Correction] Zod Error: ${errorStr} (попытка ${attempt + 1}). Просим ИИ исправиться...`);
+    }
+  }
+
+  throw new Error('Непредвиденная цепочка ошибок при генерации.');
+}

@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import { useState, useEffect } from 'react';
 import { useToastStore } from '../../../store';
-import { fetchGeminiCompletion, extractJsonFromText } from '../../../utils/geminiApi';
+import { fetchGeminiWithSchema } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
 import type { TrafficLightStatus } from '../../../types';
 import heic2any from 'heic2any';
@@ -190,13 +190,7 @@ export function AiAnalysisTab({ clientId }: Props) {
         }
       ];
 
-      // Передаем temperature = 0.1 и используем более умную Pro модель (если доступна) или просто самую новую
-      const responseText = await fetchGeminiCompletion(messages, 0.1);
-      
-      // Агрессивная экстракция JSON
-      const rawJson = extractJsonFromText(responseText);
-
-      // Строгая валидация Zod
+      // Строгая валидация Zod. Внутри fetchGeminiWithSchema работает механизм авто-исправления ошибок.
       const StatusEnum = z.enum(["red", "yellow", "green"]);
       const AiAnalysisSchema = z.object({
         avatar: StatusEnum,
@@ -205,8 +199,8 @@ export function AiAnalysisTab({ clientId }: Props) {
         feed: StatusEnum,
         aiSummary: z.string().min(10)
       });
-      
-      const parsed = AiAnalysisSchema.parse(rawJson);
+
+      const parsed = await fetchGeminiWithSchema(messages, AiAnalysisSchema, 0.1);
 
       /* Сохраняем ТОЛЬКО результаты (без скриншота) → гарантированно влезет в localStorage */
       setResult({

@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import { useState } from 'react';
 import { useToastStore } from '../../../store';
-import { fetchGeminiCompletion, extractJsonFromText } from '../../../utils/geminiApi';
+import { fetchGeminiCompletion, fetchGeminiWithSchema } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
 import { exportScriptsToWord, exportContentPlanCSV } from '../../../utils/exportUtils';
 import './ScenariosTab.css';
@@ -127,17 +127,15 @@ ${competitors ? 'Анализ трендов и конкурентов:\n' + com
   { "id": 2, "title": "Название темы 2" }
 ]`;
 
-      const responseText = await fetchGeminiCompletion(
+      const generatedTopics = await fetchGeminiWithSchema(
         [
           { role: 'system', content: 'Ты Instagram-маркетолог. Выдаешь строго JSON-массив.' },
           { role: 'user', content: prompt }
         ],
+        TopicsArraySchema,
         0.7
       );
 
-      const rawJson = extractJsonFromText(responseText);
-      const generatedTopics = TopicsArraySchema.parse(rawJson); // Zod проверка!
-      
       const formatted = generatedTopics.slice(0, 15).map((t, i) => ({
         id: Date.now() + i,
         title: t.title,
@@ -226,14 +224,12 @@ ${selectedTitles}
   { "topicTitle": "Название темы", "hook": "...", "visuals": "...", "body": "...", "cta": "...", "music": "...", "duration": "..." }
 ]`;
 
-      const responseText = await fetchGeminiCompletion(
+      const generated = await fetchGeminiWithSchema(
         [{ role: 'system', content: 'Ты элитный сценарист.' }, { role: 'user', content: prompt }],
+        ScriptsArraySchema,
         0.7
       );
 
-      const rawJson = extractJsonFromText(responseText);
-      const generated = ScriptsArraySchema.parse(rawJson); // Zod проверка
-      
       if (generated.length === 0) throw new Error('Empty array');
 
       const newScripts = generated.map((s, i) => ({

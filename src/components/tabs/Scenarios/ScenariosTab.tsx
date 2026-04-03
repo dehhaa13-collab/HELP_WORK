@@ -42,9 +42,12 @@ interface TopicItem {
   selected: boolean;
 }
 
+export type ScriptStatus = 'idea' | 'script' | 'shooting' | 'editing' | 'published';
+
 interface ScriptItem {
   id: number;
   topicTitle: string;
+  status?: ScriptStatus; // Управление через Kanban
   content?: string; // Legacy support
   hook?: string;
   visuals?: string;
@@ -269,6 +272,7 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
       const newScripts = generated.map((s, i) => ({
         id: Date.now() + i,
         topicTitle: s.topicTitle || topicsToProcess[i]?.title || `Тема`,
+        status: 'idea' as ScriptStatus,
         hook: s.hook,
         visuals: s.visuals,
         body: s.body,
@@ -454,7 +458,10 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
       {!isGeneratingScripts && scripts.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="scenarios-scripts">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', marginBottom: '1rem' }}>
-            <h3 className="ai-section-title" style={{ margin: 0 }}>📦 Сохраненные сценарии ({scripts.length})</h3>
+             <div>
+               <h3 className="ai-section-title" style={{ margin: 0 }}>🗄️ Kanban: Библиотека контента ({scripts.length})</h3>
+               <p className="ai-section-desc" style={{ margin: 0 }}>Перетаскивайте карточки по статусам для контроля прогресса.</p>
+             </div>
             <button 
               className="btn btn-secondary btn-sm"
               onClick={() => {
@@ -466,69 +473,80 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
             </button>
           </div>
           
-          {scripts.map((script) => (
-            <div key={script.id} className="card script-card">
-              <div className="card-body">
-                <div className="script-actions" style={{ marginBottom: '1rem' }}>
-                  <h4 className="script-title" style={{ marginBottom: 0 }}>{script.topicTitle}</h4>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button 
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => handleGenerateScripts(
-                        topics.find(t => t.title === script.topicTitle)?.id || undefined
-                      )}
-                    >
-                      🔄 Переписать
-                    </button>
-                    <button 
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => {
-                        const text = `Хук: ${script.hook}\nВидеоряд: ${script.visuals}\nСценарий: ${script.body}\nCTA: ${script.cta}`;
-                        navigator.clipboard.writeText(text);
-                        addToast('success', 'Скопировано', 'Сценарий в буфере');
-                      }}
-                    >
-                      📋 Скопировать
-                    </button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => removeScript(script.id)}>
-                      🗑️
-                    </button>
+          <div className="kanban-container">
+            <div className="kanban-board">
+              {[
+                { id: 'idea', title: '💡 Идеи' },
+                { id: 'script', title: '✍️ Сценарий' },
+                { id: 'shooting', title: '🎥 В съемке' },
+                { id: 'editing', title: '✂️ Монтаж' },
+                { id: 'published', title: '✅ Готово' },
+              ].map(col => {
+                const colScripts = scripts.filter(s => (s.status || 'idea') === col.id);
+                return (
+                  <div 
+                    key={col.id}
+                    className="kanban-column"
+                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }}
+                    onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove('drag-over');
+                      const scriptId = e.dataTransfer.getData('text/plain');
+                      if (scriptId) {
+                        setScripts(prev => prev.map(s => String(s.id) === scriptId ? { ...s, status: col.id as ScriptStatus } : s));
+                      }
+                    }}
+                  >
+                    <div className="kanban-column-header">
+                      <span>{col.title}</span>
+                      <span className="kanban-badge">{colScripts.length}</span>
+                    </div>
+                    {colScripts.map(script => (
+                      <div 
+                        key={script.id} 
+                        className="kanban-card"
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', String(script.id));
+                        }}
+                      >
+                        <div className="kanban-card-title">{script.topicTitle}</div>
+                        <details className="kanban-card-details">
+                          <summary style={{ fontSize: '12px', color: 'var(--color-primary)', cursor: 'pointer', marginBottom: '8px' }}>
+                            Посмотреть текст
+                          </summary>
+                          <div style={{ fontSize: '12px', color: 'var(--color-text)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {script.hook && <div><b>Хук:</b> {script.hook}</div>}
+                            {script.visuals && <div><b>Видеоряд:</b> {script.visuals}</div>}
+                            {script.body && <div><b>Текст:</b> {script.body}</div>}
+                            {script.cta && <div><b>CTA:</b> {script.cta}</div>}
+                          </div>
+                        </details>
+                        <div className="kanban-card-actions">
+                           <button 
+                            className="btn btn-ghost btn-sm"
+                            title="Скопировать"
+                            style={{ padding: '0 4px' }}
+                            onClick={() => {
+                              const text = `Хук: ${script.hook}\nВидеоряд: ${script.visuals}\nСценарий: ${script.body}\nCTA: ${script.cta}`;
+                              navigator.clipboard.writeText(text);
+                              addToast('success', 'Скопировано', 'Текст в буфере');
+                            }}
+                           >📋</button>
+                           <button 
+                             className="btn btn-ghost btn-sm" 
+                             style={{ padding: '0 4px', color: 'red' }}
+                             onClick={() => removeScript(script.id)}
+                            >🗑</button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-                
-                <div className="script-structured">
-                  {script.hook && (
-                    <div className="script-section">
-                      <span className="script-label">🎣 Хук</span>
-                      <p>{script.hook}</p>
-                    </div>
-                  )}
-                  {script.visuals && (
-                    <div className="script-section">
-                      <span className="script-label">🎬 Обстановка / Видеоряд</span>
-                      <p>{script.visuals}</p>
-                    </div>
-                  )}
-                  {script.body && (
-                    <div className="script-section">
-                      <span className="script-label">🗣 Сценарий / Текст диктора</span>
-                      <p>{script.body}</p>
-                    </div>
-                  )}
-                  {script.cta && (
-                    <div className="script-section">
-                      <span className="script-label">🎯 Призыв (CTA)</span>
-                      <p>{script.cta}</p>
-                    </div>
-                  )}
-                  <div className="script-footer">
-                    <span>🎵 Звук: {script.music || 'Тренд'}</span>
-                    <span>⏱ Время: {script.duration || '~15 сек'}</span>
-                  </div>
-                </div>
-              </div>
+                );
+              })}
             </div>
-          ))}
+          </div>
         </motion.div>
       )}
       {/* 6. ЭКСПОРТ */}

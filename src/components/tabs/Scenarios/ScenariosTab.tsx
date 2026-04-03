@@ -65,7 +65,7 @@ export function ScenariosTab({ clientId }: Props) {
       const responseText = await fetchGeminiCompletion(
         [{ role: 'user', content: prompt }], 
         0.7, 
-        'gemini-1.5-flash',
+        undefined,
         'text/plain'
       );
       
@@ -102,8 +102,7 @@ ${competitors ? 'Анализ трендов и конкурентов:\n' + com
           { role: 'system', content: 'Ты Instagram-маркетолог. Выдаешь строго JSON-массив.' },
           { role: 'user', content: prompt }
         ],
-        0.7,
-        'gemini-1.5-flash'
+        0.7
       );
 
       const generatedTopics = extractJsonFromText(responseText) as unknown as { id: number, title: string }[];
@@ -196,8 +195,7 @@ ${selectedTitles}
 
       const responseText = await fetchGeminiCompletion(
         [{ role: 'system', content: 'Ты элитный сценарист.' }, { role: 'user', content: prompt }],
-        0.7,
-        'gemini-1.5-flash'
+        0.7
       );
 
       const generated = extractJsonFromText(responseText) as unknown as any[];

@@ -190,7 +190,7 @@ export function AiAnalysisTab({ clientId }: Props) {
       ];
 
       // Передаем temperature = 0.1 и используем более умную Pro модель (если доступна) или просто самую новую
-      const responseText = await fetchGeminiCompletion(messages, 0.1, 'gemini-1.5-flash');
+      const responseText = await fetchGeminiCompletion(messages, 0.1);
       
       // Агрессивная экстракция JSON — пробует 4 стратегии парсинга
       const parsed = extractJsonFromText(responseText);

@@ -72,7 +72,7 @@ export function migrateData(key: string, rawData: any): any {
     // Сохраняем обновленные данные и новую версию сразу же назад
     localStorage.setItem(key, JSON.stringify(data));
     localStorage.setItem(versionKey, String(CURRENT_VERSION));
-    console.log(`[Storage] Мигрировал ключ ${key} до v$CURRENT_VERSION}`);
+    console.log(`[Storage] Мигрировал ключ ${key} до v${CURRENT_VERSION}`);
   } catch {
     // Игнорируем quota errors
   }

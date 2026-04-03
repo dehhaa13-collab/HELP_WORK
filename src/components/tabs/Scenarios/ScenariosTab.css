@@ -1,12 +1,6 @@
 /* Scenarios Tab — Стили */
 
-.magic-skeleton {
-  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-border) 50%, var(--color-surface) 75%);
-  background-size: 200% 100%;
-  animation: magic-shimmer 2s infinite ease-in-out;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
+/* NOTE: .magic-skeleton and @keyframes magic-shimmer are defined globally in index.css */
 
 .magic-skeleton-topic {
   height: 48px;
@@ -22,11 +16,6 @@
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(99, 102, 241, 0.1);
   border: 1px solid rgba(99, 102, 241, 0.2);
-}
-
-@keyframes magic-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
 }
 
 .btn-magic {

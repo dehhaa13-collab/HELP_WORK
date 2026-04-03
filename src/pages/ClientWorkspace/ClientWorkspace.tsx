@@ -50,17 +50,33 @@ const TABS: Tab[] = [
 export function ClientWorkspace() {
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
   const { selectedClientId, selectClient } = useClientStore();
-  const { data: clients = [] } = useClients();
+  const { data: clients = [], isLoading } = useClients();
 
   const client = clients.find((c) => c.id === selectedClientId);
 
+  // Only kick back to Dashboard if clients have fully loaded and we genuinely can't find this client
+  // (i.e., it was deleted). During loading, clients=[] so we must NOT reset.
   useEffect(() => {
-    if (selectedClientId && !client) {
-      selectClient(null);
+    if (selectedClientId && !client && !isLoading && clients.length >= 0) {
+      // Double-check: clients have loaded (isLoading=false) but this ID is missing
+      if (clients.length > 0 || !isLoading) {
+        selectClient(null);
+      }
     }
-  }, [selectedClientId, client, selectClient]);
+  }, [selectedClientId, client, selectClient, isLoading, clients.length]);
 
   if (!client) {
+    // Show loading skeleton while data hasn't arrived yet
+    if (isLoading) {
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--color-bg)' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div className="magic-skeleton" style={{ width: 64, height: 64, borderRadius: '50%', margin: '0 auto 1rem' }} />
+            <div className="magic-skeleton magic-skeleton-text" style={{ width: 200, margin: '0 auto' }} />
+          </div>
+        </div>
+      );
+    }
     return null;
   }
 

@@ -17,7 +17,8 @@ export const fetchGeminiCompletion = async (
   temperature = 0.7,
   model = 'gemini-2.5-flash',
   responseMimeType: 'application/json' | 'text/plain' = 'application/json',
-  responseSchema?: any
+  responseSchema?: any,
+  useSearch: boolean = false
 ) => {
   const apiKey = getGeminiKey();
   
@@ -69,6 +70,11 @@ export const fetchGeminiCompletion = async (
     body.systemInstruction = {
       parts: [{ text: systemInstructionText.trim() }]
     };
+  }
+
+  // Если включен режим поиска — даем ИИ доступ в интернет
+  if (useSearch) {
+    body.tools = [{ googleSearch: {} }];
   }
 
   // Конфигурация генерации

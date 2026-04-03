@@ -80,31 +80,37 @@ export function ScenariosTab({ clientId }: Props) {
   const [isGeneratingTopics, setIsGeneratingTopics] = useState(false);
   const [isGeneratingScripts, setIsGeneratingScripts] = useState(false);
 
-  // --- 1. Анализ Конкурентов (ИИ) ---
+  // --- 1. Анализ Конкурентов (Интернет-поиск) ---
   const handleAICompetitors = async () => {
-    if (!clientNiche.trim()) {
-      addToast('warning', 'Пустая ниша', 'Сначала опишите, чем занимается клиент.');
+    if (!clientNiche.trim() && !competitors.trim()) {
+      addToast('warning', 'Пустые поля', 'Введите нишу или никнеймы конкурентов.');
       return;
     }
     setIsGeneratingCompetitors(true);
     try {
-      const prompt = `Пользователь работает в нише: "${clientNiche}".
-Опиши 3 собирательных образа самых топовых и вирусных конкурентов в этой нише в Instagram на текущий год.
-Какие форматы Reels они делают? Какие фишки используют?
-Ответь кратко, без воды, чисто практические идеи для вдохновения.`;
+      const isCustomSearch = competitors.trim().length > 0;
+      const prompt = isCustomSearch 
+        ? `Проанализируй конкретных Insta-конкурентов: "${competitors}".
+СХОДИ В ИНТЕРНЕТ (Google Search) и найди их страницы, статьи о них или их последние вирусные форматы.
+Выдели их лучшие хуки, форматы видео и стиль. Напиши выжимку их сильных сторон.`
+        : `Ниша: "${clientNiche}".
+СХОДИ В ИНТЕРНЕТ (Google Search) и найди актуальные тренды Reels в этой нише на текущий месяц.
+Опиши 2-3 топовых конкурентов. Какие именно форматы и тексты (хуки) они сейчас используют?`;
 
       const responseText = await fetchGeminiCompletion(
         [{ role: 'user', content: prompt }], 
-        0.7, 
+        0.3, 
+        'gemini-2.5-flash',
+        'text/plain',
         undefined,
-        'text/plain'
+        true // Включаем Глубокий Поиск
       );
       
       setCompetitors(responseText.trim());
-      addToast('success', 'Анализ завершен', 'ИИ предложил стратегию конкурентов.');
-    } catch (error) {
+      addToast('success', 'Анализ завершен', 'ИИ просканировал тренды в сети.');
+    } catch (error: any) {
       console.error(error);
-      addToast('error', 'Ошибка', 'Не удалось сгенерировать конкурентов.');
+      addToast('error', 'Ошибка поиска', error?.message || 'Не удалось связаться с поисковиком.');
     } finally {
       setIsGeneratingCompetitors(false);
     }
@@ -329,11 +335,11 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
             rows={4}
           />
           <button 
-            className="btn btn-secondary mt-2" 
+            className={`btn btn-secondary mt-2 ${isGeneratingCompetitors ? 'btn-magic' : ''}`}
             onClick={handleAICompetitors}
             disabled={isGeneratingCompetitors}
           >
-            {isGeneratingCompetitors ? '🤖 Анализирую рынок...' : '🤖 Спросить ИИ про конкурентов'}
+            {isGeneratingCompetitors ? '🌐 Сканирую интернет...' : '🌐 Найти их в интернете (Smart Search)'}
           </button>
         </div>
       </div>

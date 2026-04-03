@@ -192,47 +192,54 @@ function humanizeError(status: number, raw: string): string {
 
 
 
+import JSON5 from 'json5';
+
 /**
  * Агрессивная экстракция JSON из текста ИИ.
  * Пробует несколько стратегий, чтобы достать валидный JSON-объект или массив
- * даже если модель обернула его в markdown-блоки или добавила текст.
+ * даже если модель обернула его в markdown-блоки, добавила текст, оставила висящие запятые и т.д.
  */
 export function extractJsonFromText(raw: string): any {
   const trimmed = raw.trim();
 
-  // Стратегия 1: прямой парс
-  try {
-    return JSON.parse(trimmed);
-  } catch { /* continue */ }
+  // Вспомогательная функция, которая пробует стандартный JSON, а при неудаче — более мягкий JSON5
+  const tryParse = (str: string) => {
+    try {
+      return JSON.parse(str);
+    } catch (e1) {
+      try {
+        return JSON5.parse(str);
+      } catch (e2) {
+        throw new Error('Parse failed');
+      }
+    }
+  };
 
-  // Стратегия 2: убрать ```json ... ``` блоки
-  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  // Стратегия 1: прямой парс (если ИИ выдал чистый ответ)
+  try { return tryParse(trimmed); } catch { /* continue */ }
+
+  // Стратегия 2: извлечь из markdown блока ```json ... ``` (нежадный поиск)
+  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (codeBlockMatch) {
-    try {
-      return JSON.parse(codeBlockMatch[1].trim());
-    } catch { /* continue */ }
+    try { return tryParse(codeBlockMatch[1]); } catch { /* continue */ }
   }
 
-  // Стратегия 3: найти первый { ... } или [ ... ] блок
-  const objectMatch = trimmed.match(/(\{[\s\S]*\})/);
-  const arrayMatch = trimmed.match(/(\[[\s\S]*\])/);
-  
-  if (arrayMatch && (!objectMatch || arrayMatch.index! < objectMatch.index!)) {
-    try {
-      return JSON.parse(arrayMatch[1]);
-    } catch { /* continue */ }
-  } else if (objectMatch) {
-    try {
-      return JSON.parse(objectMatch[1]);
-    } catch { /* continue */ }
+  // Стратегия 3: умный поиск от первой до последней скобки (отсекает текст до и после)
+  const firstBrace = trimmed.indexOf('{');
+  const lastBrace = trimmed.lastIndexOf('}');
+  const firstBracket = trimmed.indexOf('[');
+  const lastBracket = trimmed.lastIndexOf(']');
+
+  // Проверяем объект {...}
+  if (firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace) {
+    const possibleObject = trimmed.substring(firstBrace, lastBrace + 1);
+    try { return tryParse(possibleObject); } catch { /* continue */ }
   }
 
-  // Стратегия 4: убрать все не-JSON символы в начале и конце
-  const stripped = trimmed.replace(/^[^{\[]*/, '').replace(/[^}\]]*$/, '');
-  if (stripped) {
-    try {
-      return JSON.parse(stripped);
-    } catch { /* continue */ }
+  // Проверяем массив [...]
+  if (firstBracket !== -1 && lastBracket !== -1 && firstBracket < lastBracket) {
+    const possibleArray = trimmed.substring(firstBracket, lastBracket + 1);
+    try { return tryParse(possibleArray); } catch { /* continue */ }
   }
 
   console.error('[extractJsonFromText] Не удалось извлечь JSON из:', raw.substring(0, 500));

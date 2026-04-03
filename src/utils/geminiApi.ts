@@ -21,11 +21,6 @@ export const fetchGeminiCompletion = async (
   useSearch: boolean = false
 ) => {
   const apiKey = getGeminiKey();
-  
-  // В продакшене (Vercel) стучимся на защищенный Edge-сервер. В локальной разработке - напрямую, чтобы не включать vercel dev
-  const url = import.meta.env.PROD
-    ? `/api/gemini?model=${model}`
-    : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   let systemInstructionText = '';
   const contents = [];
@@ -87,107 +82,145 @@ export const fetchGeminiCompletion = async (
     body.generationConfig.responseSchema = responseSchema;
   }
 
-  const maxRetries = 3;
+  // === Multi-Model Fallback Chain ===
+  // If primary model is down (500/503), automatically try backup models
+  const FALLBACK_MODELS = [
+    model,                // Primary (what the caller requested, usually gemini-2.5-flash)
+    'gemini-2.0-flash',   // Stable backup
+    'gemini-2.0-flash-lite', // Lightest, most available
+  ];
+  // Deduplicate in case the caller already requested one of the fallbacks
+  const modelsToTry = [...new Set(FALLBACK_MODELS)];
+
+  const maxRetries = 2; // retries per model (reduced since we have fallbacks)
   const baseDelay = 1500;
-  const timeoutMs = 60_000; // 60 секунд таймаут на запрос
+  const timeoutMs = 60_000;
   let lastError = '';
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    let response: Response;
+  for (let modelIndex = 0; modelIndex < modelsToTry.length; modelIndex++) {
+    const currentModel = modelsToTry[modelIndex];
+    const isFallback = modelIndex > 0;
+    
+    if (isFallback) {
+      console.warn(`[Gemini API] 🔄 Переключаюсь на запасную модель: ${currentModel}`);
+    }
 
-    try {
-      // AbortController — таймаут на случай зависшего запроса
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    // Build URL for this model
+    const currentUrl = import.meta.env.PROD
+      ? `/api/gemini?model=${currentModel}`
+      : `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
 
-      response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      let response: Response;
 
-      clearTimeout(timeoutId);
-    } catch (networkError: any) {
-      // Сетевая ошибка или таймаут — ретраим
-      console.error(`[Gemini API] Сетевая ошибка (попытка ${attempt + 1}/${maxRetries + 1}):`, networkError);
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-      if (attempt === maxRetries) {
-        const isTimeout = networkError.name === 'AbortError';
-        const isOffline = !navigator.onLine;
+        response = await fetch(currentUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
 
-        if (isOffline) throw new Error('Нет подключения к интернету. Проверьте Wi-Fi и попробуйте снова.');
-        if (isTimeout) throw new Error('Запрос занял слишком много времени. Проверьте подключение к интернету.');
-        throw new Error('Не удалось связаться с ИИ. Проверьте подключение к интернету.');
+        clearTimeout(timeoutId);
+      } catch (networkError: any) {
+        console.error(`[Gemini API] Сетевая ошибка (${currentModel}, попытка ${attempt + 1}/${maxRetries + 1}):`, networkError);
+
+        if (attempt === maxRetries) {
+          // If we have more models to try, break to outer loop
+          if (modelIndex < modelsToTry.length - 1) {
+            lastError = networkError.message;
+            break;
+          }
+          const isTimeout = networkError.name === 'AbortError';
+          const isOffline = !navigator.onLine;
+          if (isOffline) throw new Error('Нет подключения к интернету. Проверьте Wi-Fi и попробуйте снова.');
+          if (isTimeout) throw new Error('Запрос занял слишком много времени. Проверьте подключение к интернету.');
+          throw new Error('Не удалось связаться с ИИ. Проверьте подключение к интернету.');
+        }
+
+        const delay = Math.min(baseDelay * Math.pow(2, attempt) + Math.random() * 1000, 10000);
+        console.warn(`[Gemini API] ⏳ Повтор через ${Math.round(delay)}мс...`);
+        lastError = networkError.message;
+        await new Promise(r => setTimeout(r, delay));
+        continue;
       }
 
-      const delay = Math.min(baseDelay * Math.pow(2, attempt) + Math.random() * 1000, 15000);
+      if (response.ok) {
+        const data = await response.json();
+
+        if (!data || !data.candidates || data.candidates.length === 0) {
+          console.error('[Gemini API] Неожиданная структура ответа:', JSON.stringify(data, null, 2));
+          throw new Error('ИИ вернул пустой или некорректный ответ. Проверьте консоль.');
+        }
+
+        const parts = data.candidates[0]?.content?.parts;
+        if (!parts || parts.length === 0) {
+          console.error('[Gemini API] Нет parts в ответе:', JSON.stringify(data.candidates[0], null, 2));
+          throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
+        }
+
+        const responsePart = [...parts].reverse().find((p: any) => !p.thought && p.text);
+        const content = responsePart?.text;
+
+        if (!content || typeof content !== 'string' || content.trim().length === 0) {
+          console.error('[Gemini API] Не найден текстовый ответ:', JSON.stringify(parts, null, 2));
+          throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
+        }
+
+        if (isFallback) {
+          console.info(`[Gemini API] ✅ Запасная модель ${currentModel} сработала!`);
+        }
+
+        return content;
+      }
+
+      // --- HTTP error ---
+      const errorMsg = await response.text();
+      console.error(`[Gemini API] HTTP ${response.status} (${currentModel}, попытка ${attempt + 1}/${maxRetries + 1}):`, errorMsg);
+
+      let parsedErr = '';
+      try {
+        const j = JSON.parse(errorMsg);
+        parsedErr = j.error?.message || j.message || errorMsg;
+      } catch {
+        parsedErr = errorMsg;
+      }
+
+      const isRetryable = response.status === 429 || response.status >= 500;
+      const isModelDown = response.status >= 500; // 500/502/503 = model is down
+
+      // If model is down and we have fallbacks, don't waste more retries on this model
+      if (isModelDown && modelIndex < modelsToTry.length - 1) {
+        console.warn(`[Gemini API] 💀 Модель ${currentModel} вернула ${response.status}, переключаюсь на запасную...`);
+        lastError = parsedErr;
+        break; // Break inner loop, go to next model
+      }
+
+      if (!isRetryable || attempt === maxRetries) {
+        // Last model, last attempt
+        if (modelIndex < modelsToTry.length - 1) {
+          lastError = parsedErr;
+          break;
+        }
+        const prefix = `Ошибка после всех попыток`;
+        throw new Error(`${prefix} (HTTP ${response.status}): ${humanizeError(response.status, parsedErr)}`);
+      }
+
+      const retryAfterHeader = response.headers.get('Retry-After');
+      const delay = retryAfterHeader
+        ? parseFloat(retryAfterHeader) * 1000
+        : Math.min(baseDelay * Math.pow(2, attempt) + Math.random() * 1000, 10000);
+
       console.warn(`[Gemini API] ⏳ Повтор через ${Math.round(delay)}мс...`);
-      lastError = networkError.message;
+      lastError = parsedErr;
       await new Promise(r => setTimeout(r, delay));
-      continue;
     }
-
-    if (response.ok) {
-      // Успех — парсим ответ
-      const data = await response.json();
-
-      if (!data || !data.candidates || data.candidates.length === 0) {
-        console.error('[Gemini API] Неожиданная структура ответа:', JSON.stringify(data, null, 2));
-        throw new Error('ИИ вернул пустой или некорректный ответ. Проверьте консоль.');
-      }
-
-      const parts = data.candidates[0]?.content?.parts;
-      if (!parts || parts.length === 0) {
-        console.error('[Gemini API] Нет parts в ответе:', JSON.stringify(data.candidates[0], null, 2));
-        throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
-      }
-
-      const responsePart = [...parts].reverse().find((p: any) => !p.thought && p.text);
-      const content = responsePart?.text;
-
-      if (!content || typeof content !== 'string' || content.trim().length === 0) {
-        console.error('[Gemini API] Не найден текстовый ответ:', JSON.stringify(parts, null, 2));
-        throw new Error('ИИ вернул пустой ответ. Попробуйте ещё раз.');
-      }
-
-      return content;
-    }
-
-    // --- HTTP ошибка ---
-    const errorMsg = await response.text();
-    console.error(`[Gemini API] HTTP ${response.status} (попытка ${attempt + 1}/${maxRetries + 1}):`, errorMsg);
-
-    let parsedErr = '';
-    try {
-      const j = JSON.parse(errorMsg);
-      parsedErr = j.error?.message || j.message || errorMsg;
-    } catch {
-      parsedErr = errorMsg;
-    }
-
-    // Ретраим только 429 (rate limit) и 5xx (серверные ошибки)
-    const isRetryable = response.status === 429 || response.status >= 500;
-
-    if (!isRetryable || attempt === maxRetries) {
-      const prefix = attempt > 0
-        ? `Ошибка после ${attempt + 1} попыток`
-        : 'Ошибка Gemini API';
-      throw new Error(`${prefix} (HTTP ${response.status}): ${humanizeError(response.status, parsedErr)}`);
-    }
-
-    // Подсчёт задержки: Retry-After от API или экспоненциальный backoff + jitter
-    const retryAfterHeader = response.headers.get('Retry-After');
-    const delay = retryAfterHeader
-      ? parseFloat(retryAfterHeader) * 1000
-      : Math.min(baseDelay * Math.pow(2, attempt) + Math.random() * 1000, 15000);
-
-    console.warn(`[Gemini API] ⏳ Повтор через ${Math.round(delay)}мс...`);
-    lastError = parsedErr;
-    await new Promise(r => setTimeout(r, delay));
   }
 
-  throw new Error(`Все ${maxRetries + 1} попыток исчерпаны. Последняя ошибка: ${lastError.substring(0, 100)}`);
+  throw new Error(`Все модели ИИ временно недоступны. Последняя ошибка: ${lastError.substring(0, 100)}`);
 }
 
 /**

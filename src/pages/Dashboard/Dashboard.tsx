@@ -11,7 +11,7 @@ export function Dashboard() {
   const selectClient = useClientStore((s) => s.selectClient);
   const addToast = useToastStore((s) => s.addToast);
 
-  const { data: clients = [] } = useClients();
+  const { data: clients = [], isLoading, isError } = useClients();
   const { mutateAsync: addClient, isPending: isAddingClient } = useAddClient();
   const { mutateAsync: removeClient } = useRemoveClient();
   const { mutateAsync: updateClient } = useUpdateClient();
@@ -189,7 +189,25 @@ export function Dashboard() {
           </button>
         </div>
 
-        {clients.length === 0 ? (
+        {isLoading ? (
+          <div className="client-grid">
+            {[1, 2, 3].map(i => (
+               <div key={i} className="client-card card" style={{ height: '300px', padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+                 <div className="magic-skeleton" style={{ width: '60px', height: '60px', borderRadius: '50%', marginBottom: '1rem' }} />
+                 <div className="magic-skeleton magic-skeleton-text" style={{ width: '80%', marginBottom: '0.5rem' }} />
+                 <div className="magic-skeleton magic-skeleton-text" style={{ width: '50%', marginBottom: '2rem' }} />
+                 <div className="magic-skeleton" style={{ width: '100%', height: '8px', borderRadius: '4px', marginTop: 'auto' }} />
+               </div>
+            ))}
+          </div>
+        ) : isError ? (
+          <div className="dashboard-empty">
+            <div className="dashboard-empty-icon" style={{ filter: 'grayscale(1)', opacity: 0.5 }}>❗</div>
+            <h3>Ошибка загрузки</h3>
+            <p>Не удалось получить доступ к базе данных клиентов. Проверьте соединение с интернетом или настройки сети (возможно, Supabase заблокирован вашим провайдером или VPN).</p>
+            <button className="btn btn-secondary btn-lg" onClick={() => window.location.reload()}>Обновить страницу</button>
+          </div>
+        ) : clients.length === 0 ? (
           <div className="dashboard-empty">
             <div className="dashboard-empty-icon">📋</div>
             <h3>Нет клиентов</h3>

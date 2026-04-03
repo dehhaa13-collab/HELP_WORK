@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { useToastStore } from '../../../store';
 import { fetchGeminiCompletion, extractJsonFromText } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
-import { exportScriptsToPDF, exportContentPlanPDF, exportContentPlanCSV } from '../../../utils/exportUtils';
+import { exportScriptsToWord, exportContentPlanCSV } from '../../../utils/exportUtils';
 import './ScenariosTab.css';
 
 interface Props {
@@ -370,11 +370,11 @@ ${selectedTitles}
             <button 
               className="btn btn-secondary btn-sm"
               onClick={() => {
-                exportScriptsToPDF(scripts, clientNiche);
-                addToast('success', 'Экспорт', 'PDF откроется в новом окне');
+                exportScriptsToWord(scripts);
+                addToast('success', 'Экспорт', 'Файл .docx скачивается...');
               }}
             >
-              📄 Скачать PDF
+              📄 Скачать Word
             </button>
           </div>
           
@@ -443,42 +443,33 @@ ${selectedTitles}
           ))}
         </div>
       )}
-      {/* 6. ЭКСПОРТ КОНТЕНТ-ПЛАНА */}
+      {/* 6. ЭКСПОРТ */}
       {(formatSlots.length > 0 || scripts.length > 0) && (
         <div className="card">
           <div className="card-body">
-            <h3 className="ai-section-title">📥 Экспорт контент-плана</h3>
-            <p className="ai-section-desc">Скачайте готовый контент-план с форматами, названиями и темами.</p>
+            <h3 className="ai-section-title">📥 Экспорт</h3>
+            <p className="ai-section-desc">Скачайте сценарии или контент-план для работы.</p>
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-              <button 
-                className="btn btn-primary"
-                onClick={() => {
-                  exportContentPlanPDF(formatSlots, targetItems, topics);
-                  addToast('success', 'PDF', 'Контент-план откроется в новом окне');
-                }}
-              >
-                📋 Контент-план (PDF)
-              </button>
+              {scripts.length > 0 && (
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => {
+                    exportScriptsToWord(scripts);
+                    addToast('success', 'Word', 'Сценарии.docx скачивается...');
+                  }}
+                >
+                  📄 Сценарии (Word)
+                </button>
+              )}
               <button 
                 className="btn btn-secondary"
                 onClick={() => {
                   exportContentPlanCSV(formatSlots, targetItems, topics);
-                  addToast('success', 'CSV', 'Файл скачан — откройте в Google Sheets или Excel');
+                  addToast('success', 'CSV', 'Файл скачан — откройте в Google Sheets или Numbers');
                 }}
               >
                 📊 Контент-план (CSV)
               </button>
-              {scripts.length > 0 && (
-                <button 
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    exportScriptsToPDF(scripts, clientNiche);
-                    addToast('success', 'PDF', 'Сценарии откроются в новом окне');
-                  }}
-                >
-                  📝 Все сценарии (PDF)
-                </button>
-              )}
             </div>
           </div>
         </div>

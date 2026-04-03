@@ -20,6 +20,7 @@ export function Dashboard() {
   const [newName, setNewName] = useState('');
   const [newInstagram, setNewInstagram] = useState('');
   const [newComment, setNewComment] = useState('');
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
 
   // Inline editing
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
@@ -30,8 +31,9 @@ export function Dashboard() {
     if (e.key === 'Escape') {
       if (showAddModal) setShowAddModal(false);
       if (editingClientId) setEditingClientId(null);
+      if (clientToDelete) setClientToDelete(null);
     }
-  }, [showAddModal, editingClientId]);
+  }, [showAddModal, editingClientId, clientToDelete]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleEscape);
@@ -64,14 +66,18 @@ export function Dashboard() {
 
   // === Remove client ===
   const handleRemoveClient = async (client: Client) => {
-    if (window.confirm(`Удалить клиента "${client.name}"? Это действие необратимо.`)) {
-      try {
-        await removeClient(client.id);
-        addToast('info', 'Клиент удалён', `${client.name} удалён из системы.`);
-      } catch (error) {
-        const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
-        addToast('error', 'Ошибка удаления', errMsg);
-      }
+    setClientToDelete(client);
+  };
+
+  const confirmRemoveClient = async () => {
+    if (!clientToDelete) return;
+    try {
+      await removeClient(clientToDelete.id);
+      addToast('info', 'Клиент удалён', `${clientToDelete.name} удалён из системы.`);
+      setClientToDelete(null);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      addToast('error', 'Ошибка удаления', errMsg);
     }
   };
 
@@ -374,6 +380,27 @@ export function Dashboard() {
               <button className="btn btn-primary" onClick={handleAddClient} disabled={isAddingClient}>
                 {isAddingClient ? '...' : 'Добавить'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {clientToDelete && (
+        <div className="modal-overlay" onClick={() => setClientToDelete(null)}>
+          <div className="modal card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>⚠️ Удалить клиента?</h2>
+              <button className="btn btn-ghost btn-sm" onClick={() => setClientToDelete(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: '14px', lineHeight: 1.5 }}>
+                Вы действительно хотите навсегда удалить клиента <b>"{clientToDelete.name}"</b>? Это действие необратимо, вся его генерация контента и статус будут потеряны.
+              </p>
+            </div>
+            <div className="modal-footer" style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border)' }}>
+              <button className="btn btn-secondary" onClick={() => setClientToDelete(null)}>Отмена</button>
+              <button className="btn btn-danger" onClick={confirmRemoveClient}>Удалить</button>
             </div>
           </div>
         </div>

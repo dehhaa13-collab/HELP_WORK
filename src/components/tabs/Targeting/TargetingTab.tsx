@@ -19,6 +19,9 @@ interface TargetItem {
 }
 
 export function TargetingTab({ clientId }: Props) {
+  // Синхронизация с количеством слотов из вкладки Форматы
+  const [slotCount] = usePersistedState<number>(`hw_formats_count_${clientId}`, 10);
+
   const [items, setItems] = usePersistedState<TargetItem[]>(
     `hw_targeting_${clientId}`,
     Array.from({ length: 10 }, (_, i) => ({
@@ -30,40 +33,45 @@ export function TargetingTab({ clientId }: Props) {
     }))
   );
 
-  const togglePromoted = (id: number) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, isPromoted: !item.isPromoted } : item
+  // Динамическая подстройка количества строк
+  const syncedItems = (() => {
+    if (items.length < slotCount) {
+      const extra = Array.from({ length: slotCount - items.length }, (_, i) => ({
+        id: items.length + i + 1,
+        name: '',
+        isPromoted: false,
+        results: '',
+        campaignFinished: false,
+      }));
+      return [...items, ...extra];
+    }
+    return items.slice(0, slotCount);
+  })();
+
+  // Обновляем persisted state при изменении, используя syncedItems как базу
+  const updateItem = (id: number, patch: Partial<TargetItem>) => {
+    setItems(
+      syncedItems.map((item) =>
+        item.id === id ? { ...item, ...patch } : item
       )
     );
+  };
+
+  const togglePromoted = (id: number) => {
+    const current = syncedItems.find(i => i.id === id);
+    updateItem(id, { isPromoted: !current?.isPromoted });
   };
 
   const toggleFinished = (id: number) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, campaignFinished: !item.campaignFinished } : item
-      )
-    );
+    const current = syncedItems.find(i => i.id === id);
+    updateItem(id, { campaignFinished: !current?.campaignFinished });
   };
 
-  const updateResults = (id: number, results: string) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, results } : item
-      )
-    );
-  };
+  const updateResults = (id: number, results: string) => updateItem(id, { results });
+  const updateName = (id: number, name: string) => updateItem(id, { name });
 
-  const updateName = (id: number, name: string) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, name } : item
-      )
-    );
-  };
-
-  const promotedCount = items.filter((i) => i.isPromoted).length;
-  const finishedCount = items.filter((i) => i.campaignFinished).length;
+  const promotedCount = syncedItems.filter((i) => i.isPromoted).length;
+  const finishedCount = syncedItems.filter((i) => i.campaignFinished).length;
 
   return (
     <div className="targeting-tab">
@@ -101,7 +109,7 @@ export function TargetingTab({ clientId }: Props) {
           </p>
 
           <div className="targeting-list">
-            {items.map((item) => (
+            {syncedItems.map((item) => (
               <div
                 key={item.id}
                 className={`targeting-item ${item.campaignFinished ? 'targeting-item-finished' : ''}`}

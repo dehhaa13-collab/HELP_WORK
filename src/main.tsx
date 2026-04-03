@@ -11,7 +11,7 @@ Sentry.init({
   integrations: [
     Sentry.replayIntegration(),
   ],
-  tracesSampleRate: 1.0, 
+  tracesSampleRate: 0.1, // 10% of transactions (saves Sentry quota)
   replaysSessionSampleRate: 0, 
   replaysOnErrorSampleRate: 1.0, 
 });

@@ -16,7 +16,8 @@ export const fetchGeminiCompletion = async (
   messages: any[],
   temperature = 0.7,
   model = 'gemini-2.5-flash',
-  responseMimeType: 'application/json' | 'text/plain' = 'application/json'
+  responseMimeType: 'application/json' | 'text/plain' = 'application/json',
+  responseSchema?: any
 ) => {
   const apiKey = getGeminiKey();
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -71,6 +72,10 @@ export const fetchGeminiCompletion = async (
     responseMimeType,
     temperature: temperature,
   };
+
+  if (responseSchema) {
+    body.generationConfig.responseSchema = responseSchema;
+  }
 
   const maxRetries = 3;
   const baseDelay = 1500;
@@ -247,6 +252,7 @@ export function extractJsonFromText(raw: string): any {
 }
 
 import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 
 export async function fetchGeminiWithSchema<T>(
   messages: any[],
@@ -255,10 +261,13 @@ export async function fetchGeminiWithSchema<T>(
   model = 'gemini-2.5-flash'
 ): Promise<T> {
   const maxRetries = 2; // До 3 попыток исправить свои галлюцинации
+  
+  // Конвертируем Zod в JSON Schema для нативной поддержки Gemini Structured Outputs
+  const jsonSchema = zodToJsonSchema(schema as any, { target: 'openApi3' });
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    // 1. Запрашиваем текст от ИИ
-    const textResponse = await fetchGeminiCompletion(messages, temperature, model);
+    // 1. Запрашиваем текст от ИИ с жестко заданным responseSchema
+    const textResponse = await fetchGeminiCompletion(messages, temperature, model, 'application/json', jsonSchema);
 
     let rawJson: any;
     try {

@@ -52,6 +52,45 @@ export function AiAnalysisTab({ clientId }: Props) {
   const [isDragActive, setIsDragActive] = useState(false);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
 
+  /**
+   * Сжимает изображение через Canvas API.
+   * iPhone скриншоты могут весить 5-10МБ → base64 будет 7-14МБ → Vercel Edge лимит 4.5МБ → 500 ошибка.
+   * Сжимаем до max 1600px и JPEG quality 0.7 (~200-400КБ) — для ИИ-анализа этого более чем достаточно.
+   */
+  const compressImage = (dataUrl: string, maxSize = 1600, quality = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+
+        // Масштабируем, если изображение больше maxSize
+        if (width > maxSize || height > maxSize) {
+          const ratio = Math.min(maxSize / width, maxSize / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('Canvas not supported')); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        
+        // Логируем для отладки
+        const originalKB = Math.round(dataUrl.length * 0.75 / 1024);
+        const compressedKB = Math.round(compressed.length * 0.75 / 1024);
+        console.info(`[Image] Сжатие: ${originalKB}КБ → ${compressedKB}КБ (${width}×${height}px, quality=${quality})`);
+        
+        resolve(compressed);
+      };
+      img.onerror = () => reject(new Error('Не удалось декодировать изображение'));
+      img.src = dataUrl;
+    });
+  };
+
   // Универсальный обработчик файла с поддержкой HEIC
   const processFile = async (file: File) => {
     try {
@@ -80,8 +119,17 @@ export function AiAnalysisTab({ clientId }: Props) {
       }
 
       const reader = new FileReader();
-      reader.onload = () => {
-        setScreenshotPreview(reader.result as string);
+      reader.onload = async () => {
+        const rawDataUrl = reader.result as string;
+        
+        // Сжимаем ПЕРЕД отправкой (iPhone фото 5-10МБ → ~300КБ)
+        try {
+          const compressed = await compressImage(rawDataUrl);
+          setScreenshotPreview(compressed);
+        } catch {
+          // Fallback: используем оригинал, если сжатие не сработало
+          setScreenshotPreview(rawDataUrl);
+        }
       };
       reader.readAsDataURL(finalFile);
     } catch (error) {

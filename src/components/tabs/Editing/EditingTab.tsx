@@ -22,6 +22,9 @@ interface EditItem {
 interface TargetItem {
   id: number;
   name: string;
+  isPromoted?: boolean;
+  results?: string;
+  campaignFinished?: boolean;
 }
 
 export function EditingTab({ clientId }: Props) {
@@ -29,7 +32,7 @@ export function EditingTab({ clientId }: Props) {
   const [slotCount] = usePersistedState<number>(`hw_formats_count_${clientId}`, 10);
   
   // Читаем названия публикаций из вкладки Таргет (source of truth)
-  const [targetItems] = usePersistedState<TargetItem[]>(`hw_targeting_${clientId}`, []);
+  const [targetItems, setTargetItems] = usePersistedState<TargetItem[]>(`hw_targeting_${clientId}`, []);
 
   const [items, setItems] = usePersistedState<EditItem[]>(
     `hw_editing_${clientId}`,
@@ -72,6 +75,21 @@ export function EditingTab({ clientId }: Props) {
     return target?.name || '';
   };
 
+  // Обновить название публикации в Таргете прямо из вкладки Монтаж
+  const updatePubName = (id: number, newName: string) => {
+    const existingIndex = targetItems.findIndex((t) => t.id === id);
+    if (existingIndex >= 0) {
+      const newItems = [...targetItems];
+      newItems[existingIndex] = { ...newItems[existingIndex], name: newName };
+      setTargetItems(newItems);
+    } else {
+      // Создаем новую запись, если её ещё не было
+      const newItem: TargetItem = { id, name: newName, isPromoted: false, results: '', campaignFinished: false };
+      const newItems = [...targetItems, newItem].sort((a, b) => a.id - b.id);
+      setTargetItems(newItems);
+    }
+  };
+
   const doneCount = syncedItems.filter((i) => i.editingDone && i.coverDone && i.deliveredToClient).length;
 
   return (
@@ -106,8 +124,15 @@ export function EditingTab({ clientId }: Props) {
                   <span className="editing-col-num">
                     <span className="editing-num-badge">{item.id}</span>
                   </span>
-                  <span className="editing-col-name editing-pub-name" title={pubName || `Публикация #${item.id}`}>
-                    {pubName || <span className="editing-pub-placeholder">Публикация #{item.id}</span>}
+                  <span className="editing-col-name">
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder={`Публикация #${item.id}`}
+                      value={pubName}
+                      onChange={(e) => updatePubName(item.id, e.target.value)}
+                      style={{ width: '100%', maxWidth: '280px', height: '32px', fontSize: '13px', backgroundColor: 'transparent' }}
+                    />
                   </span>
                   <span className="editing-col-check">
                     <label className="magic-checkbox-wrapper">

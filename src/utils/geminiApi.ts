@@ -20,7 +20,11 @@ export const fetchGeminiCompletion = async (
   responseSchema?: any
 ) => {
   const apiKey = getGeminiKey();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  
+  // В продакшене (Vercel) стучимся на защищенный Edge-сервер. В локальной разработке - напрямую, чтобы не включать vercel dev
+  const url = import.meta.env.PROD
+    ? `/api/gemini?model=${model}`
+    : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   let systemInstructionText = '';
   const contents = [];

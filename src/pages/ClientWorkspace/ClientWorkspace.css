@@ -345,3 +345,51 @@
     padding: var(--space-3);
   }
 }
+
+/* ===== Tab Loader (lazy loading skeleton) ===== */
+.tab-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+  min-height: 300px;
+  gap: var(--space-3);
+}
+
+.tab-loader-bar {
+  width: 200px;
+  height: 4px;
+  background-color: var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.tab-loader-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
+  animation: tabLoaderSlide 1.2s ease-in-out infinite;
+  border-radius: var(--radius-full);
+}
+
+@keyframes tabLoaderSlide {
+  0% { left: -50%; }
+  100% { left: 100%; }
+}
+
+.tab-loader-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  animation: tabLoaderPulse 1.5s ease infinite;
+}
+
+@keyframes tabLoaderPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}

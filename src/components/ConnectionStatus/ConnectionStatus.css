@@ -1,0 +1,42 @@
+/* ConnectionStatus — стили */
+
+.connection-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  animation: bannerSlideDown 0.3s ease;
+}
+
+@keyframes bannerSlideDown {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+.connection-offline {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+}
+
+.connection-restored {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  animation: bannerSlideDown 0.3s ease, bannerFadeOut 0.5s 2.5s ease forwards;
+}
+
+@keyframes bannerFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.connection-icon {
+  font-size: 16px;
+}

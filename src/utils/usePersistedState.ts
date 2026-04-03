@@ -4,6 +4,7 @@
    ============================================ */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { migrateData } from './migrations';
 
 /**
  * Как useState, но автоматически сохраняет/загружает из localStorage.
@@ -18,7 +19,10 @@ export function usePersistedState<T>(key: string, defaultValue: T): [T, React.Di
   const [value, setValueRaw] = useState<T>(() => {
     try {
       const saved = localStorage.getItem(key);
-      if (saved !== null) return JSON.parse(saved);
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        return migrateData(key, parsed);
+      }
     } catch { /* повреждённые данные — игнорируем */ }
     return defaultRef.current;
   });
@@ -30,7 +34,12 @@ export function usePersistedState<T>(key: string, defaultValue: T): [T, React.Di
     prevKeyRef.current = key;
     try {
       const saved = localStorage.getItem(key);
-      setValueRaw(saved !== null ? JSON.parse(saved) : defaultRef.current);
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        setValueRaw(migrateData(key, parsed));
+      } else {
+        setValueRaw(defaultRef.current);
+      }
     } catch {
       setValueRaw(defaultRef.current);
     }

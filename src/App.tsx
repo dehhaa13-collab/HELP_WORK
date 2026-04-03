@@ -9,6 +9,7 @@ import { LoginPage } from './pages/Login/LoginPage';
 import { Dashboard } from './pages/Dashboard/Dashboard';
 import { ClientWorkspace } from './pages/ClientWorkspace/ClientWorkspace';
 import { ToastContainer } from './components/Toast/ToastContainer';
+import { ConnectionStatus } from './components/ConnectionStatus/ConnectionStatus';
 
 function App() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -24,6 +25,7 @@ function App() {
 
   return (
     <>
+      <ConnectionStatus />
       {!isAuthenticated ? (
         <LoginPage />
       ) : selectedClientId ? (

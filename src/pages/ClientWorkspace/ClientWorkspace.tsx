@@ -3,17 +3,29 @@
    Боковое меню (десктоп) + нижняя навигация (мобайл) + вкладки
    ============================================ */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useClientStore } from '../../store';
 import { PIPELINE_STAGES } from '../../types';
-import { AiAnalysisTab } from '../../components/tabs/AiAnalysis/AiAnalysisTab';
-import { FormatsTab } from '../../components/tabs/Formats/FormatsTab';
-import { ScenariosTab } from '../../components/tabs/Scenarios/ScenariosTab';
-import { EditingTab } from '../../components/tabs/Editing/EditingTab';
-import { TargetingTab } from '../../components/tabs/Targeting/TargetingTab';
-import { FeedbackTab } from '../../components/tabs/Feedback/FeedbackTab';
 import { ErrorBoundary } from '../../components/ErrorBoundary/ErrorBoundary';
 import './ClientWorkspace.css';
+
+// Lazy-loaded tabs — каждая вкладка загружается только при переключении
+const AiAnalysisTab = lazy(() => import('../../components/tabs/AiAnalysis/AiAnalysisTab').then(m => ({ default: m.AiAnalysisTab })));
+const FormatsTab = lazy(() => import('../../components/tabs/Formats/FormatsTab').then(m => ({ default: m.FormatsTab })));
+const ScenariosTab = lazy(() => import('../../components/tabs/Scenarios/ScenariosTab').then(m => ({ default: m.ScenariosTab })));
+const EditingTab = lazy(() => import('../../components/tabs/Editing/EditingTab').then(m => ({ default: m.EditingTab })));
+const TargetingTab = lazy(() => import('../../components/tabs/Targeting/TargetingTab').then(m => ({ default: m.TargetingTab })));
+const FeedbackTab = lazy(() => import('../../components/tabs/Feedback/FeedbackTab').then(m => ({ default: m.FeedbackTab })));
+
+/** Скелетон-загрузчик вкладки */
+function TabLoader() {
+  return (
+    <div className="tab-loader">
+      <div className="tab-loader-bar" />
+      <div className="tab-loader-text">Загрузка...</div>
+    </div>
+  );
+}
 
 type TabKey = 'ai-analysis' | 'formats' | 'scenarios' | 'editing' | 'targeting' | 'feedback';
 
@@ -133,7 +145,9 @@ export function ClientWorkspace() {
             key={activeTab}
             section={TABS.find((t) => t.key === activeTab)?.label}
           >
-            {renderTab()}
+            <Suspense fallback={<TabLoader />}>
+              {renderTab()}
+            </Suspense>
           </ErrorBoundary>
         </div>
       </main>

@@ -74,17 +74,47 @@ export const fetchGeminiCompletion = async (
 
   const maxRetries = 3;
   const baseDelay = 1500;
+  const timeoutMs = 60_000; // 60 секунд таймаут на запрос
   let lastError = '';
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
+    let response: Response;
+
+    try {
+      // AbortController — таймаут на случай зависшего запроса
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+    } catch (networkError: any) {
+      // Сетевая ошибка или таймаут — ретраим
+      console.error(`[Gemini API] Сетевая ошибка (попытка ${attempt + 1}/${maxRetries + 1}):`, networkError);
+
+      if (attempt === maxRetries) {
+        const isTimeout = networkError.name === 'AbortError';
+        const isOffline = !navigator.onLine;
+        
+        if (isOffline) throw new Error('Нет подключения к интернету. Проверьте Wi-Fi и попробуйте снова.');
+        if (isTimeout) throw new Error('Запрос занял слишком много времени. Проверьте подключение к интернету.');
+        throw new Error('Не удалось связаться с ИИ. Проверьте подключение к интернету.');
+      }
+
+      const delay = Math.min(baseDelay * Math.pow(2, attempt) + Math.random() * 1000, 15000);
+      console.warn(`[Gemini API] ⏳ Повтор через ${Math.round(delay)}мс...`);
+      lastError = networkError.message;
+      await new Promise(r => setTimeout(r, delay));
+      continue;
+    }
 
     if (response.ok) {
-      // Успех — переходим к парсингу ответа ниже
+      // Успех — парсим ответ
       const data = await response.json();
 
       if (!data || !data.candidates || data.candidates.length === 0) {
@@ -109,7 +139,7 @@ export const fetchGeminiCompletion = async (
       return content;
     }
 
-    // --- Ошибка ---
+    // --- HTTP ошибка ---
     const errorMsg = await response.text();
     console.error(`[Gemini API] HTTP ${response.status} (попытка ${attempt + 1}/${maxRetries + 1}):`, errorMsg);
 
@@ -125,7 +155,6 @@ export const fetchGeminiCompletion = async (
     const isRetryable = response.status === 429 || response.status >= 500;
     
     if (!isRetryable || attempt === maxRetries) {
-      // Не ретраим — или все попытки исчерпаны
       const prefix = attempt > 0 
         ? `Ошибка после ${attempt + 1} попыток` 
         : 'Ошибка Gemini API';

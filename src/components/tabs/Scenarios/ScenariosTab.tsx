@@ -3,6 +3,7 @@
    Свободный вертикальный скролл с независимыми блоками
    ============================================ */
 
+import { z } from 'zod';
 import { useState } from 'react';
 import { useToastStore } from '../../../store';
 import { fetchGeminiCompletion, extractJsonFromText } from '../../../utils/geminiApi';
@@ -13,6 +14,26 @@ import './ScenariosTab.css';
 interface Props {
   clientId: string;
 }
+
+// === Zod Schemas for Runtime Safety ===
+const TopicSchema = z.object({
+  id: z.number().optional(),
+  title: z.string().min(1)
+});
+
+const TopicsArraySchema = z.array(TopicSchema);
+
+const ScriptSchema = z.object({
+  topicTitle: z.string().optional(),
+  hook: z.string().optional(),
+  visuals: z.string().optional(),
+  body: z.string().optional(),
+  cta: z.string().optional(),
+  music: z.string().optional(),
+  duration: z.string().optional()
+});
+
+const ScriptsArraySchema = z.array(ScriptSchema);
 
 interface TopicItem {
   id: number;
@@ -114,21 +135,24 @@ ${competitors ? 'Анализ трендов и конкурентов:\n' + com
         0.7
       );
 
-      const generatedTopics = extractJsonFromText(responseText) as unknown as { id: number, title: string }[];
-      if (!Array.isArray(generatedTopics)) throw new Error('Invalid JSON format');
-
+      const rawJson = extractJsonFromText(responseText);
+      const generatedTopics = TopicsArraySchema.parse(rawJson); // Zod проверка!
+      
       const formatted = generatedTopics.slice(0, 15).map((t, i) => ({
         id: Date.now() + i,
         title: t.title,
         selected: false
       }));
 
-      // Добавляем к существующим темам или заменяем
       setTopics(formatted);
       addToast('success', 'Темы готовы', `ИИ сгенерировал ${formatted.length} тем.`);
     } catch (error) {
       console.error(error);
-      addToast('error', 'Ошибка генерации', 'ИИ вернул неверный формат.');
+      if (error instanceof z.ZodError) {
+         addToast('error', 'Ошибка структуры ИИ', 'ИИ выдал некорректный ответ (не прошел валидацию Zod). Попробуйте еще раз.');
+      } else {
+         addToast('error', 'Ошибка генерации', 'ИИ вернул неверный формат.');
+      }
     } finally {
       setIsGeneratingTopics(false);
     }
@@ -207,8 +231,10 @@ ${selectedTitles}
         0.7
       );
 
-      const generated = extractJsonFromText(responseText) as unknown as any[];
-      if (!Array.isArray(generated) || generated.length === 0) throw new Error('Empty or invalid output');
+      const rawJson = extractJsonFromText(responseText);
+      const generated = ScriptsArraySchema.parse(rawJson); // Zod проверка
+      
+      if (generated.length === 0) throw new Error('Empty array');
 
       const newScripts = generated.map((s, i) => ({
         id: Date.now() + i,
@@ -235,7 +261,11 @@ ${selectedTitles}
       addToast('success', 'Сценарии готовы', 'ИИ написал структурированные тексты.');
     } catch (error) {
       console.error(error);
-      addToast('error', 'Ошибка', 'Сбой при генерации сценариев.');
+      if (error instanceof z.ZodError) {
+         addToast('error', 'Ошибка генерации', 'ИИ вернул ответ в неверном формате (Zod). Повторите генерацию.');
+      } else {
+         addToast('error', 'Ошибка', 'Сбой при генерации сценариев.');
+      }
     } finally {
       setIsGeneratingScripts(false);
     }

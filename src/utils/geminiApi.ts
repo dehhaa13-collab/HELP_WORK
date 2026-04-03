@@ -13,8 +13,8 @@ export const getGeminiKey = () => {
  * Принимает формат сообщений как у OpenAI/Grok и конвертирует в формат Gemini.
  */
 export const fetchGeminiCompletion = async (
-  messages: any[], 
-  temperature = 0.7, 
+  messages: any[],
+  temperature = 0.7,
   model = 'gemini-2.5-flash',
   responseMimeType: 'application/json' | 'text/plain' = 'application/json'
 ) => {
@@ -59,7 +59,7 @@ export const fetchGeminiCompletion = async (
   }
 
   const body: any = { contents };
-  
+
   if (systemInstructionText.trim()) {
     body.systemInstruction = {
       parts: [{ text: systemInstructionText.trim() }]
@@ -100,7 +100,7 @@ export const fetchGeminiCompletion = async (
       if (attempt === maxRetries) {
         const isTimeout = networkError.name === 'AbortError';
         const isOffline = !navigator.onLine;
-        
+
         if (isOffline) throw new Error('Нет подключения к интернету. Проверьте Wi-Fi и попробуйте снова.');
         if (isTimeout) throw new Error('Запрос занял слишком много времени. Проверьте подключение к интернету.');
         throw new Error('Не удалось связаться с ИИ. Проверьте подключение к интернету.');
@@ -153,10 +153,10 @@ export const fetchGeminiCompletion = async (
 
     // Ретраим только 429 (rate limit) и 5xx (серверные ошибки)
     const isRetryable = response.status === 429 || response.status >= 500;
-    
+
     if (!isRetryable || attempt === maxRetries) {
-      const prefix = attempt > 0 
-        ? `Ошибка после ${attempt + 1} попыток` 
+      const prefix = attempt > 0
+        ? `Ошибка после ${attempt + 1} попыток`
         : 'Ошибка Gemini API';
       throw new Error(`${prefix} (HTTP ${response.status}): ${humanizeError(response.status, parsedErr)}`);
     }
@@ -194,10 +194,10 @@ function humanizeError(status: number, raw: string): string {
 
 /**
  * Агрессивная экстракция JSON из текста ИИ.
- * Пробует несколько стратегий, чтобы достать валидный JSON-объект
+ * Пробует несколько стратегий, чтобы достать валидный JSON-объект или массив
  * даже если модель обернула его в markdown-блоки или добавила текст.
  */
-export function extractJsonFromText(raw: string): Record<string, unknown> {
+export function extractJsonFromText(raw: string): any {
   const trimmed = raw.trim();
 
   // Стратегия 1: прямой парс
@@ -213,16 +213,22 @@ export function extractJsonFromText(raw: string): Record<string, unknown> {
     } catch { /* continue */ }
   }
 
-  // Стратегия 3: найти первый { ... } блок (greedy)
-  const braceMatch = trimmed.match(/(\{[\s\S]*\})/);
-  if (braceMatch) {
+  // Стратегия 3: найти первый { ... } или [ ... ] блок
+  const objectMatch = trimmed.match(/(\{[\s\S]*\})/);
+  const arrayMatch = trimmed.match(/(\[[\s\S]*\])/);
+  
+  if (arrayMatch && (!objectMatch || arrayMatch.index! < objectMatch.index!)) {
     try {
-      return JSON.parse(braceMatch[1]);
+      return JSON.parse(arrayMatch[1]);
+    } catch { /* continue */ }
+  } else if (objectMatch) {
+    try {
+      return JSON.parse(objectMatch[1]);
     } catch { /* continue */ }
   }
 
   // Стратегия 4: убрать все не-JSON символы в начале и конце
-  const stripped = trimmed.replace(/^[^{]*/, '').replace(/[^}]*$/, '');
+  const stripped = trimmed.replace(/^[^{\[]*/, '').replace(/[^}\]]*$/, '');
   if (stripped) {
     try {
       return JSON.parse(stripped);

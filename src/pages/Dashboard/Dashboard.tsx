@@ -12,7 +12,7 @@ export function Dashboard() {
   const addToast = useToastStore((s) => s.addToast);
 
   const { data: clients = [] } = useClients();
-  const { mutateAsync: addClient } = useAddClient();
+  const { mutateAsync: addClient, isPending: isAddingClient } = useAddClient();
   const { mutateAsync: removeClient } = useRemoveClient();
   const { mutateAsync: updateClient } = useUpdateClient();
 
@@ -370,8 +370,10 @@ export function Dashboard() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowAddModal(false)}>Отмена</button>
-              <button className="btn btn-primary" onClick={handleAddClient}>Добавить</button>
+              <button className="btn btn-secondary" onClick={() => setShowAddModal(false)} disabled={isAddingClient}>Отмена</button>
+              <button className="btn btn-primary" onClick={handleAddClient} disabled={isAddingClient}>
+                {isAddingClient ? '...' : 'Добавить'}
+              </button>
             </div>
           </div>
         </div>

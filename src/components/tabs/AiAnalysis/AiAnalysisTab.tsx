@@ -3,6 +3,7 @@
    Светофор + загрузка скриншота + AI разбор
    ============================================ */
 
+import { z } from 'zod';
 import { useState, useEffect } from 'react';
 import { useToastStore } from '../../../store';
 import { fetchGeminiCompletion, extractJsonFromText } from '../../../utils/geminiApi';
@@ -192,35 +193,28 @@ export function AiAnalysisTab({ clientId }: Props) {
       // Передаем temperature = 0.1 и используем более умную Pro модель (если доступна) или просто самую новую
       const responseText = await fetchGeminiCompletion(messages, 0.1);
       
-      // Агрессивная экстракция JSON — пробует 4 стратегии парсинга
-      const parsed = extractJsonFromText(responseText);
+      // Агрессивная экстракция JSON
+      const rawJson = extractJsonFromText(responseText);
 
-      // Строгая валидация — никаких фейковых данных
-      const validStatuses = ['red', 'yellow', 'green'];
-      const missingFields: string[] = [];
-
-      if (!validStatuses.includes(parsed.avatar as string)) missingFields.push('avatar');
-      if (!validStatuses.includes(parsed.bio as string)) missingFields.push('bio');
-      if (!validStatuses.includes(parsed.highlights as string)) missingFields.push('highlights');
-      if (!validStatuses.includes(parsed.feed as string)) missingFields.push('feed');
+      // Строгая валидация Zod
+      const StatusEnum = z.enum(["red", "yellow", "green"]);
+      const AiAnalysisSchema = z.object({
+        avatar: StatusEnum,
+        bio: StatusEnum,
+        highlights: StatusEnum,
+        feed: StatusEnum,
+        aiSummary: z.string().min(10)
+      });
       
-      if (missingFields.length > 0) {
-        console.error("[AI-анализ] ИИ не дал оценки для:", missingFields, "Ответ:", parsed);
-        throw new Error(`ИИ не дал оценки для: ${missingFields.join(', ')}. Попробуйте ещё раз.`);
-      }
-
-      if (!parsed.aiSummary || typeof parsed.aiSummary !== 'string' || (parsed.aiSummary as string).trim().length < 10) {
-        console.error("[AI-анализ] ИИ не дал текстовый разбор:", parsed);
-        throw new Error("ИИ не предоставил текстовый разбор профиля. Попробуйте ещё раз.");
-      }
+      const parsed = AiAnalysisSchema.parse(rawJson);
 
       /* Сохраняем ТОЛЬКО результаты (без скриншота) → гарантированно влезет в localStorage */
       setResult({
-        avatar: parsed.avatar as TrafficLightStatus,
-        bio: parsed.bio as TrafficLightStatus,
-        highlights: parsed.highlights as TrafficLightStatus,
-        feed: parsed.feed as TrafficLightStatus,
-        aiSummary: parsed.aiSummary as string,
+        avatar: parsed.avatar,
+        bio: parsed.bio,
+        highlights: parsed.highlights,
+        feed: parsed.feed,
+        aiSummary: parsed.aiSummary,
       });
       setIsAnalyzing(false);
 
@@ -228,8 +222,13 @@ export function AiAnalysisTab({ clientId }: Props) {
     } catch (error) {
       console.error(error);
       setIsAnalyzing(false);
-      const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
-      addToast('error', 'Ошибка анализа', errMsg);
+      
+      if (error instanceof z.ZodError) {
+        addToast('error', 'Ошибка проверки (Zod)', 'ИИ забыл поставить оценку какому-то элементу. Попробуйте ещё раз.');
+      } else {
+        const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
+        addToast('error', 'Ошибка анализа', errMsg);
+      }
     }
   };
 

@@ -17,6 +17,7 @@ export interface Client {
   avatar?: string;
   pipelineStage: PipelineStage;
   meetingSummary?: string;
+  workspaceData: Record<string, any>;
   createdAt: string;
   updatedAt: string;
 }

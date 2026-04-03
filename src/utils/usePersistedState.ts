@@ -5,56 +5,78 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { migrateData } from './migrations';
+import { useClientStore } from '../store';
 
 /**
- * Как useState, но автоматически сохраняет/загружает из localStorage.
- * При смене key (например, другой clientId) — данные загружаются для нового ключа.
- *
- * @param key — Уникальный ключ localStorage (обычно `hw_${tab}_${clientId}`)
- * @param defaultValue — Значение по умолчанию, если в localStorage ничего нет
+ * Раньше: LocalStorage State
+ * ТЕПЕРЬ: Облачный State (Multiplayer)
+ * Автоматически сохраняет и загружает данные из `workspace_data` Supabase.
+ * При потере интернета продолжает работать с localStorage.
  */
 export function usePersistedState<T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
   const defaultRef = useRef(defaultValue);
 
+  // Подключаемся к глобальному стору Supabase
+  const clients = useClientStore((s) => s.clients);
+  const selectedClientId = useClientStore((s) => s.selectedClientId);
+  const updateWorkspaceData = useClientStore((s) => s.updateWorkspaceData);
+
+  const client = clients.find((c) => c.id === selectedClientId);
+  const cloudValue = client?.workspaceData?.[key];
+
+  // Инициализация значения при загрузке компонента
   const [value, setValueRaw] = useState<T>(() => {
+    // 1. Пробуем облако
+    if (cloudValue !== undefined) {
+      return migrateData(key, cloudValue);
+    }
+    // 2. Фоллбек на локальное хранилище (оффлайн режим или до первой синхронизации)
     try {
       const saved = localStorage.getItem(key);
       if (saved !== null) {
-        const parsed = JSON.parse(saved);
-        return migrateData(key, parsed);
+        return migrateData(key, JSON.parse(saved));
       }
-    } catch { /* повреждённые данные — игнорируем */ }
+    } catch { /* игнор */ }
     return defaultRef.current;
   });
 
-  // При смене key (другой клиент) → загрузить данные для нового ключа
-  const prevKeyRef = useRef(key);
+  // Синхронизация с облаком и обработка смены ключа (клиента)
   useEffect(() => {
-    if (prevKeyRef.current === key) return;
-    prevKeyRef.current = key;
-    try {
-      const saved = localStorage.getItem(key);
-      if (saved !== null) {
-        const parsed = JSON.parse(saved);
-        setValueRaw(migrateData(key, parsed));
-      } else {
-        setValueRaw(defaultRef.current);
-      }
-    } catch {
-      setValueRaw(defaultRef.current);
-    }
-  }, [key]);
+    let nextVal: T;
 
-  // Обёртка setState → сохраняет и в React state, и в localStorage
+    if (cloudValue !== undefined) {
+      nextVal = migrateData(key, cloudValue);
+    } else {
+      try {
+        const saved = localStorage.getItem(key);
+        nextVal = saved !== null ? migrateData(key, JSON.parse(saved)) : defaultRef.current;
+      } catch {
+        nextVal = defaultRef.current;
+      }
+    }
+
+    const nextValStr = JSON.stringify(nextVal);
+    // Обновляем локальный стейт только если он реально отличается от облачного (избегаем лупов)
+    setValueRaw((currentVal) => (JSON.stringify(currentVal) !== nextValStr ? nextVal : currentVal));
+  }, [key, cloudValue]);
+
+  // Обёртка setState → сохраняет в React state, localStorage И в Supabase
   const setValue = useCallback<React.Dispatch<React.SetStateAction<T>>>((action) => {
     setValueRaw((prev) => {
       const next = action instanceof Function ? action(prev) : action;
-      try {
-        localStorage.setItem(key, JSON.stringify(next));
-      } catch { /* localStorage переполнен — молча игнорируем */ }
+      
+      // Локальный кеш для оффлайна
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch { }
+
+      // Мультиплеер (Облако) - только если выбран клиент
+      if (selectedClientId) {
+        // Мы вызываем это напрямую, внутри store встроен дебаунс (чтобы не убить БД при быстром наборе текста)
+        updateWorkspaceData(selectedClientId, key, next);
+      }
+
       return next;
     });
-  }, [key]);
+  }, [key, selectedClientId, updateWorkspaceData]);
 
   return [value, setValue];
 }

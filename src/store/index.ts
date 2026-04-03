@@ -86,6 +86,7 @@ interface ClientState {
   updateClient: (id: string, updates: Partial<Client>) => Promise<void>;
   advanceStage: (id: string) => Promise<void>;
   setStage: (id: string, stage: PipelineStage) => Promise<void>;
+  updateWorkspaceData: (id: string, key: string, data: any) => void;
   fetchClients: () => Promise<void>;
   initRealtime: () => void;
 }
@@ -115,6 +116,7 @@ const mapDbToClient = (row: Record<string, unknown>): Client => ({
   instagram: row.instagram as string,
   pipelineStage: (row.pipeline_stage as PipelineStage) || 'meeting',
   meetingSummary: (row.meeting_summary as string) || undefined,
+  workspaceData: typeof row.workspace_data === 'object' && row.workspace_data ? row.workspace_data as Record<string, any> : {},
   createdAt: row.created_at as string,
   updatedAt: row.updated_at as string,
 });
@@ -237,6 +239,37 @@ export const useClientStore = create<ClientState>((set, get) => ({
 
   setStage: async (id, stage) => {
     await get().updateClient(id, { pipelineStage: stage });
+  },
+
+  updateWorkspaceData: (id, key, data) => {
+    // Оптимистичное обновление UI
+    set((state) => {
+      const updated = state.clients.map((c) => {
+        if (c.id === id) {
+          return {
+            ...c,
+            workspaceData: { ...c.workspaceData, [key]: data }
+          };
+        }
+        return c;
+      });
+      cacheClients(updated);
+      return { clients: updated };
+    });
+
+    // Дебаунс отправки в базу (сохраняем не чаще 1.5 сек)
+    if ((window as any).workspaceUpdateTimer) clearTimeout((window as any).workspaceUpdateTimer);
+    (window as any).workspaceUpdateTimer = setTimeout(async () => {
+      const client = get().clients.find(c => c.id === id);
+      if (client) {
+        // Мы отправляем весь объект. При очень интенсивной совместной работе на одном клиенте
+        // могут быть перезаписи. Для более глубокого merge нужен rpc в Postgres.
+        await supabase
+          .from('clients')
+          .update({ workspace_data: client.workspaceData })
+          .eq('id', id);
+      }
+    }, 1500);
   },
 
   // Realtime подписка — синхронизация между пользователями

@@ -1,9 +1,6 @@
-/* ============================================
-   Dashboard — Главный экран с Pipeline клиентов
-   ============================================ */
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore, useClientStore, useToastStore } from '../../store';
+import { useClients, useAddClient, useUpdateClient, useRemoveClient } from '../../hooks/useClients';
 import { PIPELINE_STAGES } from '../../types';
 import type { Client, PipelineStage } from '../../types';
 import './Dashboard.css';
@@ -11,8 +8,13 @@ import './Dashboard.css';
 export function Dashboard() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const { clients, addClient, removeClient, advanceStage, setStage, updateClient, selectClient } = useClientStore();
+  const selectClient = useClientStore((s) => s.selectClient);
   const addToast = useToastStore((s) => s.addToast);
+
+  const { data: clients = [] } = useClients();
+  const { mutateAsync: addClient } = useAddClient();
+  const { mutateAsync: removeClient } = useRemoveClient();
+  const { mutateAsync: updateClient } = useUpdateClient();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
@@ -48,7 +50,7 @@ export function Dashboard() {
     }
 
     try {
-      await addClient(newName.trim(), newInstagram.trim(), newComment.trim() || undefined);
+      await addClient({ name: newName.trim(), instagram: newInstagram.trim(), comment: newComment.trim() });
       addToast('success', 'Клиент добавлен', `${newName.trim()} добавлен в систему.`);
       setNewName('');
       setNewInstagram('');
@@ -82,8 +84,8 @@ export function Dashboard() {
       return;
     }
     try {
-      await advanceStage(client.id);
       const nextStage = PIPELINE_STAGES[currentIndex + 1];
+      await updateClient({ id: client.id, updates: { pipelineStage: nextStage.key as PipelineStage } });
       addToast('success', 'Этап обновлён', `${client.name} переведён на этап «${nextStage.emoji} ${nextStage.label}».`);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
@@ -101,7 +103,7 @@ export function Dashboard() {
     }
     try {
       const prevStage = PIPELINE_STAGES[currentIndex - 1];
-      await setStage(client.id, prevStage.key as PipelineStage);
+      await updateClient({ id: client.id, updates: { pipelineStage: prevStage.key as PipelineStage } });
       addToast('success', 'Этап обновлён', `${client.name} возвращён на этап «${prevStage.emoji} ${prevStage.label}».`);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
@@ -122,7 +124,7 @@ export function Dashboard() {
       return;
     }
     try {
-      await updateClient(clientId, { name: editName.trim() });
+      await updateClient({ id: clientId, updates: { name: editName.trim() } });
       addToast('success', 'Имя обновлено', `Имя клиента изменено на «${editName.trim()}».`);
       setEditingClientId(null);
     } catch (error) {

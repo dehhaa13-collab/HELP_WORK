@@ -5,9 +5,9 @@
 
 import { create } from 'zustand';
 import * as Sentry from '@sentry/react';
-import type { Client, PipelineStage, Toast, ToastType, User } from '../types';
-import { PIPELINE_STAGES } from '../types';
-import { supabase } from '../utils/supabase';
+import type { Toast, ToastType, User } from '../types';
+
+const generateId = () => crypto.randomUUID();
 
 // === Auth Store ===
 interface AuthState {
@@ -75,213 +75,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 }));
 
-// === Client Store (Supabase + Realtime) ===
+// === Client Store (Только UI стейт: какой клиент сейчас открыт) ===
 interface ClientState {
-  clients: Client[];
   selectedClientId: string | null;
-  isLoading: boolean;
   selectClient: (id: string | null) => void;
-  addClient: (name: string, instagram: string, comment?: string) => Promise<void>;
-  removeClient: (id: string) => Promise<void>;
-  updateClient: (id: string, updates: Partial<Client>) => Promise<void>;
-  advanceStage: (id: string) => Promise<void>;
-  setStage: (id: string, stage: PipelineStage) => Promise<void>;
-  updateWorkspaceData: (id: string, key: string, data: any) => void;
-  fetchClients: () => Promise<void>;
-  initRealtime: () => void;
 }
 
-const generateId = () => crypto.randomUUID();
-
-// localStorage как кэш для быстрого первого рендера
-const CLIENTS_CACHE_KEY = 'helper_work_clients';
-const getCachedClients = (): Client[] => {
-  try {
-    const saved = localStorage.getItem(CLIENTS_CACHE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch { /* ignore */ }
-  return [];
-};
-const cacheClients = (clients: Client[]) => {
-  try { localStorage.setItem(CLIENTS_CACHE_KEY, JSON.stringify(clients)); } catch { /* ignore */ }
-};
-
-// Маппинг: snake_case (БД) -> camelCase (фронтенд)
-const mapDbToClient = (row: Record<string, unknown>): Client => ({
-  id: row.id as string,
-  name: row.name as string,
-  instagram: row.instagram as string,
-  pipelineStage: (row.pipeline_stage as PipelineStage) || 'meeting',
-  meetingSummary: (row.meeting_summary as string) || undefined,
-  workspaceData: typeof row.workspace_data === 'object' && row.workspace_data ? row.workspace_data as Record<string, any> : {},
-  createdAt: row.created_at as string,
-  updatedAt: row.updated_at as string,
-});
-
-export const useClientStore = create<ClientState>((set, get) => ({
-  clients: getCachedClients(),
+export const useClientStore = create<ClientState>((set) => ({
   selectedClientId: null,
-  isLoading: false,
-
-  selectClient: (id) => {
-    set({ selectedClientId: id });
-  },
-
-  fetchClients: async () => {
-    set({ isLoading: true });
-    const { data, error } = await supabase
-      .from('clients')
-      .select('*')
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      console.error('[Supabase] Ошибка загрузки клиентов:', error);
-      set({ isLoading: false });
-      return;
-    }
-
-    const clients = (data || []).map(mapDbToClient);
-    cacheClients(clients);
-    set({ clients, isLoading: false });
-  },
-
-  addClient: async (name, instagram, comment) => {
-    const instagramFormatted = instagram.startsWith('@') ? instagram : `@${instagram}`;
-    const insertData: Record<string, unknown> = {
-      name,
-      instagram: instagramFormatted,
-      pipeline_stage: 'meeting',
-    };
-    if (comment && comment.trim()) {
-      insertData.meeting_summary = comment.trim();
-    }
-    const { data, error } = await supabase
-      .from('clients')
-      .insert(insertData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('[Supabase] Ошибка добавления клиента:', error);
-      throw new Error(`Не удалось добавить клиента: ${error.message}`);
-    }
-
-    const newClient = mapDbToClient(data);
-    set((state) => {
-      const updated = [...state.clients, newClient];
-      cacheClients(updated);
-      return { clients: updated };
-    });
-  },
-
-  removeClient: async (id) => {
-    const { error } = await supabase
-      .from('clients')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('[Supabase] Ошибка удаления клиента:', error);
-      throw new Error(`Не удалось удалить клиента: ${error.message}`);
-    }
-
-    set((state) => {
-      const updated = state.clients.filter((c) => c.id !== id);
-      cacheClients(updated);
-      return {
-        clients: updated,
-        selectedClientId: state.selectedClientId === id ? null : state.selectedClientId,
-      };
-    });
-  },
-
-  updateClient: async (id, updates) => {
-    // Маппинг camelCase -> snake_case
-    const dbUpdates: Record<string, unknown> = {};
-    if (updates.name !== undefined) dbUpdates.name = updates.name;
-    if (updates.instagram !== undefined) dbUpdates.instagram = updates.instagram;
-    if (updates.pipelineStage !== undefined) dbUpdates.pipeline_stage = updates.pipelineStage;
-    if (updates.meetingSummary !== undefined) dbUpdates.meeting_summary = updates.meetingSummary;
-    dbUpdates.updated_at = new Date().toISOString();
-
-    const { error } = await supabase
-      .from('clients')
-      .update(dbUpdates)
-      .eq('id', id);
-
-    if (error) {
-      console.error('[Supabase] Ошибка обновления клиента:', error);
-      throw new Error(`Не удалось обновить клиента: ${error.message}`);
-    }
-
-    set((state) => {
-      const updated = state.clients.map((c) =>
-        c.id === id ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c
-      );
-      cacheClients(updated);
-      return { clients: updated };
-    });
-  },
-
-  advanceStage: async (id) => {
-    const client = get().clients.find((c) => c.id === id);
-    if (!client) return;
-
-    const currentIndex = PIPELINE_STAGES.findIndex((s) => s.key === client.pipelineStage);
-    if (currentIndex < PIPELINE_STAGES.length - 1) {
-      const nextStage = PIPELINE_STAGES[currentIndex + 1].key;
-      await get().updateClient(id, { pipelineStage: nextStage });
-    }
-  },
-
-  setStage: async (id, stage) => {
-    await get().updateClient(id, { pipelineStage: stage });
-  },
-
-  updateWorkspaceData: (id, key, data) => {
-    // Оптимистичное обновление UI
-    set((state) => {
-      const updated = state.clients.map((c) => {
-        if (c.id === id) {
-          return {
-            ...c,
-            workspaceData: { ...c.workspaceData, [key]: data }
-          };
-        }
-        return c;
-      });
-      cacheClients(updated);
-      return { clients: updated };
-    });
-
-    // Дебаунс отправки в базу (сохраняем не чаще 1.5 сек)
-    if ((window as any).workspaceUpdateTimer) clearTimeout((window as any).workspaceUpdateTimer);
-    (window as any).workspaceUpdateTimer = setTimeout(async () => {
-      const client = get().clients.find(c => c.id === id);
-      if (client) {
-        // Мы отправляем весь объект. При очень интенсивной совместной работе на одном клиенте
-        // могут быть перезаписи. Для более глубокого merge нужен rpc в Postgres.
-        await supabase
-          .from('clients')
-          .update({ workspace_data: client.workspaceData })
-          .eq('id', id);
-      }
-    }, 1500);
-  },
-
-  // Realtime подписка — синхронизация между пользователями
-  initRealtime: () => {
-    supabase
-      .channel('clients-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, () => {
-        // При любом изменении — перезагрузить все данные
-        get().fetchClients();
-      })
-      .subscribe();
-  },
+  selectClient: (id) => set({ selectedClientId: id }),
 }));
 
 // === Toast Store (Система уведомлений об ошибках) ===

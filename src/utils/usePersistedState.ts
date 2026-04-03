@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { migrateData } from './migrations';
 import { useClientStore } from '../store';
+import { useClients, useUpdateWorkspaceData } from '../hooks/useClients';
 
 /**
  * Раньше: LocalStorage State
@@ -17,9 +18,9 @@ export function usePersistedState<T>(key: string, defaultValue: T): [T, React.Di
   const defaultRef = useRef(defaultValue);
 
   // Подключаемся к глобальному стору Supabase
-  const clients = useClientStore((s) => s.clients);
+  const { data: clients = [] } = useClients();
   const selectedClientId = useClientStore((s) => s.selectedClientId);
-  const updateWorkspaceData = useClientStore((s) => s.updateWorkspaceData);
+  const updateWorkspaceData = useUpdateWorkspaceData();
 
   const client = clients.find((c) => c.id === selectedClientId);
   const cloudValue = client?.workspaceData?.[key];

@@ -12,6 +12,8 @@
   "dependencies": {
     "@sentry/react": "^10.47.0",
     "@supabase/supabase-js": "^2.100.1",
+    "@tanstack/react-query": "^5.96.1",
+    "@tanstack/react-query-devtools": "^5.96.1",
     "docx": "^9.6.1",
     "file-saver": "^2.0.5",
     "heic2any": "^0.0.4",

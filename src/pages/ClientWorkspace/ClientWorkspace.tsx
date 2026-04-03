@@ -5,6 +5,7 @@
 
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useClientStore } from '../../store';
+import { useClients } from '../../hooks/useClients';
 import { PIPELINE_STAGES } from '../../types';
 import { ErrorBoundary } from '../../components/ErrorBoundary/ErrorBoundary';
 import './ClientWorkspace.css';
@@ -46,7 +47,8 @@ const TABS: Tab[] = [
 
 export function ClientWorkspace() {
   const [activeTab, setActiveTab] = useState<TabKey>('ai-analysis');
-  const { clients, selectedClientId, selectClient } = useClientStore();
+  const { selectedClientId, selectClient } = useClientStore();
+  const { data: clients = [] } = useClients();
 
   const client = clients.find((c) => c.id === selectedClientId);
 

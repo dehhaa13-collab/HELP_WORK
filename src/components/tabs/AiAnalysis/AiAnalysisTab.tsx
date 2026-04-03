@@ -5,6 +5,7 @@
 
 import { z } from 'zod';
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useToastStore } from '../../../store';
 import { fetchGeminiWithSchema } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
@@ -298,7 +299,7 @@ export function AiAnalysisTab({ clientId }: Props) {
           )}
 
           <button
-            className="btn btn-primary btn-lg ai-analyze-btn"
+            className={`btn btn-primary btn-lg ai-analyze-btn ${isAnalyzing ? 'btn-magic' : ''}`}
             onClick={handleAnalyze}
             disabled={isAnalyzing || !screenshotPreview}
           >
@@ -313,9 +314,26 @@ export function AiAnalysisTab({ clientId }: Props) {
         </div>
       </div>
 
-      {/* Traffic Light */}
-      {(result.avatar || result.bio || result.highlights || result.feed) && (
-        <div className="card ai-traffic-card">
+      {/* Traffic Light & Skel */}
+      <AnimatePresence>
+        {isAnalyzing && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+             <div className="card ai-traffic-card" style={{ marginBottom: "1rem" }}>
+               <div className="card-body">
+                 <div className="magic-skeleton" style={{ height: "100px", width: "100%" }}></div>
+               </div>
+             </div>
+             <div className="card ai-summary-card">
+               <div className="card-body">
+                 <div className="magic-skeleton" style={{ height: "160px", width: "100%" }}></div>
+               </div>
+             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {!isAnalyzing && (result.avatar || result.bio || result.highlights || result.feed) && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card ai-traffic-card">
           <div className="card-body">
             <h3 className="ai-section-title">🚦 Оценка профиля (Светофор)</h3>
             <p className="ai-section-desc">
@@ -328,12 +346,12 @@ export function AiAnalysisTab({ clientId }: Props) {
               {renderTrafficLight('Визуал ленты', 'feed')}
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* AI Summary */}
-      {result.aiSummary && (
-        <div className="card ai-summary-card">
+      {!isAnalyzing && result.aiSummary && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card ai-summary-card" style={{ marginTop: "1rem" }}>
           <div className="card-body">
             <h3 className="ai-section-title">📋 Подробный анализ от ИИ</h3>
             <div className="ai-summary-text">
@@ -342,7 +360,7 @@ export function AiAnalysisTab({ clientId }: Props) {
               ))}
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   );

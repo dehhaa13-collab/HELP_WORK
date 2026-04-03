@@ -5,6 +5,7 @@
 
 import { z } from 'zod';
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useToastStore } from '../../../store';
 import { fetchGeminiCompletion, fetchGeminiWithSchema } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
@@ -351,26 +352,44 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
           </div>
 
           <div className="topics-list">
-            {topics.map(topic => (
-              <div key={topic.id} className="cf-topic-row">
-                <input 
-                  type="checkbox" 
-                  checked={topic.selected} 
-                  onChange={() => toggleTopic(topic.id)} 
-                  className="cf-checkbox"
-                />
-                <input
-                  type="text"
-                  className="input cf-topic-input"
-                  value={topic.title}
-                  onChange={(e) => updateTopicTitle(topic.id, e.target.value)}
-                />
-                <button className="btn btn-ghost btn-sm" onClick={() => removeTopic(topic.id)}>✕</button>
-              </div>
-            ))}
-            <button className="btn btn-dashed mt-2" onClick={handleAddCustomTopic} style={{ width: '100%' }}>
-              + Добавить свою тему
-            </button>
+            <AnimatePresence>
+              {isGeneratingTopics ? (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  {[...Array(5)].map((_, i) => (
+                    <div key={`skel-${i}`} className="magic-skeleton magic-skeleton-topic"></div>
+                  ))}
+                </motion.div>
+              ) : (
+                topics.map((topic, i) => (
+                  <motion.div 
+                    key={topic.id} 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="cf-topic-row"
+                  >
+                    <input 
+                      type="checkbox" 
+                      checked={topic.selected} 
+                      onChange={() => toggleTopic(topic.id)} 
+                      className="cf-checkbox"
+                    />
+                    <input
+                      type="text"
+                      className="input cf-topic-input"
+                      value={topic.title}
+                      onChange={(e) => updateTopicTitle(topic.id, e.target.value)}
+                    />
+                    <button className="btn btn-ghost btn-sm" onClick={() => removeTopic(topic.id)}>✕</button>
+                  </motion.div>
+                ))
+              )}
+            </AnimatePresence>
+            {!isGeneratingTopics && (
+              <button className="btn btn-dashed mt-2" onClick={handleAddCustomTopic} style={{ width: '100%' }}>
+                + Добавить свою тему
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -403,21 +422,31 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
           </div>
 
           <button 
-            className="btn btn-primary btn-lg mt-3" 
+            className={`btn btn-primary btn-lg mt-3 ${isGeneratingScripts ? 'btn-magic' : ''}`}
             style={{ width: '100%' }}
             onClick={() => handleGenerateScripts()}
             disabled={isGeneratingScripts}
           >
             {isGeneratingScripts 
-              ? '🤖 Пишу сценарии...' 
+              ? '✨ AI пишет сценарии...' 
               : `✍️ Сгенерировать сценарии для ${topics.filter(t => t.selected).length} тем`}
           </button>
         </div>
       </div>
 
       {/* 5. ИТОГОВЫЕ СЦЕНАРИИ */}
-      {scripts.length > 0 && (
-        <div className="scenarios-scripts">
+      <AnimatePresence>
+        {isGeneratingScripts && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+             {[...Array(topics.filter(t => t.selected).length || 1)].map((_, i) => (
+               <div key={`skel-s-${i}`} className="magic-skeleton magic-skeleton-script"></div>
+             ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {!isGeneratingScripts && scripts.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="scenarios-scripts">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', marginBottom: '1rem' }}>
             <h3 className="ai-section-title" style={{ margin: 0 }}>📦 Сохраненные сценарии ({scripts.length})</h3>
             <button 
@@ -494,7 +523,7 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
               </div>
             </div>
           ))}
-        </div>
+        </motion.div>
       )}
       {/* 6. ЭКСПОРТ */}
       {(formatSlots.length > 0 || scripts.length > 0) && (

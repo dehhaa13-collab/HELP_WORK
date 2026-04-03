@@ -9,7 +9,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useToastStore } from '../../../store';
 import { fetchGeminiCompletion, fetchGeminiWithSchema } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
-import { exportScriptsToWord, exportContentPlanCSV } from '../../../utils/exportUtils';
 import './ScenariosTab.css';
 
 interface Props {
@@ -69,14 +68,6 @@ export function ScenariosTab({ clientId }: Props) {
   // AI Options
   const [aiTone, setAiTone] = usePersistedState(`hw_ai_tone_${clientId}`, 'expert');
   const [aiFormat, setAiFormat] = usePersistedState(`hw_ai_format_${clientId}`, 'talking_head');
-
-  // Cross-tab data for exports
-  const [formatSlots] = usePersistedState<{ id: number; format: 'reels' | 'post' | 'carousel' | null }[]>(
-    `hw_formats_slots_${clientId}`, []
-  );
-  const [targetItems] = usePersistedState<{ id: number; name: string }[]>(
-    `hw_targeting_${clientId}`, []
-  );
 
   // --- Loading States ---
   const [isGeneratingCompetitors, setIsGeneratingCompetitors] = useState(false);
@@ -305,10 +296,6 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
     }
   };
 
-  const removeScript = (id: number) => {
-    setScripts(scripts.filter(s => s.id !== id));
-  };
-
   return (
     <div className="scenarios-tab content-factory">
       {/* 1. БРИФ КЛИЕНТА */}
@@ -456,127 +443,10 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
       </AnimatePresence>
 
       {!isGeneratingScripts && scripts.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="scenarios-scripts">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', marginBottom: '1rem' }}>
-             <div>
-               <h3 className="ai-section-title" style={{ margin: 0 }}>🗄️ Kanban: Библиотека контента ({scripts.length})</h3>
-               <p className="ai-section-desc" style={{ margin: 0 }}>Перетаскивайте карточки по статусам для контроля прогресса.</p>
-             </div>
-            <button 
-              className="btn btn-secondary btn-sm"
-              onClick={() => {
-                exportScriptsToWord(scripts);
-                addToast('success', 'Экспорт', 'Файл .docx скачивается...');
-              }}
-            >
-              📄 Скачать Word
-            </button>
-          </div>
-          
-          <div className="kanban-container">
-            <div className="kanban-board">
-              {[
-                { id: 'idea', title: '💡 Идеи' },
-                { id: 'script', title: '✍️ Сценарий' },
-                { id: 'shooting', title: '🎥 В съемке' },
-                { id: 'editing', title: '✂️ Монтаж' },
-                { id: 'published', title: '✅ Готово' },
-              ].map(col => {
-                const colScripts = scripts.filter(s => (s.status || 'idea') === col.id);
-                return (
-                  <div 
-                    key={col.id}
-                    className="kanban-column"
-                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }}
-                    onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.currentTarget.classList.remove('drag-over');
-                      const scriptId = e.dataTransfer.getData('text/plain');
-                      if (scriptId) {
-                        setScripts(prev => prev.map(s => String(s.id) === scriptId ? { ...s, status: col.id as ScriptStatus } : s));
-                      }
-                    }}
-                  >
-                    <div className="kanban-column-header">
-                      <span>{col.title}</span>
-                      <span className="kanban-badge">{colScripts.length}</span>
-                    </div>
-                    {colScripts.map(script => (
-                      <div 
-                        key={script.id} 
-                        className="kanban-card"
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData('text/plain', String(script.id));
-                        }}
-                      >
-                        <div className="kanban-card-title">{script.topicTitle}</div>
-                        <details className="kanban-card-details">
-                          <summary style={{ fontSize: '12px', color: 'var(--color-primary)', cursor: 'pointer', marginBottom: '8px' }}>
-                            Посмотреть текст
-                          </summary>
-                          <div style={{ fontSize: '12px', color: 'var(--color-text)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            {script.hook && <div><b>Хук:</b> {script.hook}</div>}
-                            {script.visuals && <div><b>Видеоряд:</b> {script.visuals}</div>}
-                            {script.body && <div><b>Текст:</b> {script.body}</div>}
-                            {script.cta && <div><b>CTA:</b> {script.cta}</div>}
-                          </div>
-                        </details>
-                        <div className="kanban-card-actions">
-                           <button 
-                            className="btn btn-ghost btn-sm"
-                            title="Скопировать"
-                            style={{ padding: '0 4px' }}
-                            onClick={() => {
-                              const text = `Хук: ${script.hook}\nВидеоряд: ${script.visuals}\nСценарий: ${script.body}\nCTA: ${script.cta}`;
-                              navigator.clipboard.writeText(text);
-                              addToast('success', 'Скопировано', 'Текст в буфере');
-                            }}
-                           >📋</button>
-                           <button 
-                             className="btn btn-ghost btn-sm" 
-                             style={{ padding: '0 4px', color: 'red' }}
-                             onClick={() => removeScript(script.id)}
-                            >🗑</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </motion.div>
-      )}
-      {/* 6. ЭКСПОРТ */}
-      {(formatSlots.length > 0 || scripts.length > 0) && (
-        <div className="card">
-          <div className="card-body">
-            <h3 className="ai-section-title">📥 Экспорт</h3>
-            <p className="ai-section-desc">Скачайте сценарии или контент-план для работы.</p>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-              {scripts.length > 0 && (
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => {
-                    exportScriptsToWord(scripts);
-                    addToast('success', 'Word', 'Сценарии.docx скачивается...');
-                  }}
-                >
-                  📄 Сценарии (Word)
-                </button>
-              )}
-              <button 
-                className="btn btn-secondary"
-                onClick={() => {
-                  exportContentPlanCSV(formatSlots, targetItems, topics);
-                  addToast('success', 'CSV', 'Файл скачан — откройте в Google Sheets или Numbers');
-                }}
-              >
-                📊 Контент-план (CSV)
-              </button>
-            </div>
+        <div className="card mt-4">
+          <div className="card-body" style={{ textAlign: 'center' }}>
+             <h3 className="ai-section-title">✅ Сценарии сгенерированы!</h3>
+             <p className="ai-section-desc">Они автоматически перенесены в вашу общую Канбан-доску на главной вкладке <b>"Дашборд"</b>.</p>
           </div>
         </div>
       )}

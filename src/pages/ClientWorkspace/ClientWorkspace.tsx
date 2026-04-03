@@ -11,6 +11,7 @@ import { ErrorBoundary } from '../../components/ErrorBoundary/ErrorBoundary';
 import './ClientWorkspace.css';
 
 // Lazy-loaded tabs — каждая вкладка загружается только при переключении
+const DashboardTab = lazy(() => import('../../components/tabs/Dashboard/DashboardTab').then(m => ({ default: m.DashboardTab })));
 const AiAnalysisTab = lazy(() => import('../../components/tabs/AiAnalysis/AiAnalysisTab').then(m => ({ default: m.AiAnalysisTab })));
 const FormatsTab = lazy(() => import('../../components/tabs/Formats/FormatsTab').then(m => ({ default: m.FormatsTab })));
 const ScenariosTab = lazy(() => import('../../components/tabs/Scenarios/ScenariosTab').then(m => ({ default: m.ScenariosTab })));
@@ -28,7 +29,7 @@ function TabLoader() {
   );
 }
 
-type TabKey = 'ai-analysis' | 'formats' | 'scenarios' | 'editing' | 'targeting' | 'feedback';
+type TabKey = 'dashboard' | 'ai-analysis' | 'formats' | 'scenarios' | 'editing' | 'targeting' | 'feedback';
 
 interface Tab {
   key: TabKey;
@@ -37,6 +38,7 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
+  { key: 'dashboard', label: 'Дашборд', emoji: '🗄️' },
   { key: 'ai-analysis', label: 'AI-анализ', emoji: '🤖' },
   { key: 'formats', label: 'Форматы', emoji: '📱' },
   { key: 'scenarios', label: 'Сценарии', emoji: '📝' },
@@ -46,7 +48,7 @@ const TABS: Tab[] = [
 ];
 
 export function ClientWorkspace() {
-  const [activeTab, setActiveTab] = useState<TabKey>('ai-analysis');
+  const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
   const { selectedClientId, selectClient } = useClientStore();
   const { data: clients = [] } = useClients();
 
@@ -67,6 +69,8 @@ export function ClientWorkspace() {
 
   const renderTab = () => {
     switch (activeTab) {
+      case 'dashboard':
+        return <DashboardTab clientId={client.id} />;
       case 'ai-analysis':
         return <AiAnalysisTab clientId={client.id} />;
       case 'formats':
@@ -80,7 +84,7 @@ export function ClientWorkspace() {
       case 'feedback':
         return <FeedbackTab clientId={client.id} />;
       default:
-        return <AiAnalysisTab clientId={client.id} />;
+        return <DashboardTab clientId={client.id} />;
     }
   };
 

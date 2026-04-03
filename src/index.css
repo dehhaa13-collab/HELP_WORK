@@ -374,7 +374,37 @@ select.input:hover {
 
 .textarea {
   resize: vertical;
-  min-height: 80px;
+  min-height: 100px;
+  overflow-y: auto;
+  line-height: 1.5;
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* Кастомный скроллбар для понятности (Webkit) */
+.textarea::-webkit-scrollbar {
+  width: 10px;
+}
+.textarea::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: var(--radius-md);
+  margin: 4px 0;
+}
+.textarea::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 20px;
+  border: 3px solid var(--color-surface); /* Имитация отступа */
+}
+.textarea::-webkit-scrollbar-thumb:hover {
+  background-color: #A78BFA; /* Primary color */
+}
+
+/* Также выделяем уголок для изменения размера (resize) */
+.textarea::-webkit-resizer {
+  background-image: radial-gradient(var(--color-border) 40%, transparent 40%);
+  background-size: 4px 4px;
+  background-position: bottom right;
+  background-repeat: no-repeat;
 }
 
 /* === Badge === */

@@ -232,6 +232,27 @@ textarea {
   font-size: var(--font-size-base);
 }
 
+.btn-dashed {
+  background-color: transparent;
+  border: 2px dashed var(--color-border);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.btn-dashed:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+/* Utility spacing */
+.mt-2 { margin-top: var(--space-2); }
+.mt-3 { margin-top: var(--space-3); }
+
 /* === Card === */
 .card {
   background-color: var(--color-surface);

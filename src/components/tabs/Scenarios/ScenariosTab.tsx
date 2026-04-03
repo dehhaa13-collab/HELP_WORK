@@ -5,7 +5,6 @@
 
 import { z } from 'zod';
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useToastStore } from '../../../store';
 import { fetchGeminiCompletion, fetchGeminiWithSchema } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
@@ -350,21 +349,19 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
           </div>
 
           <div className="topics-list">
-            <AnimatePresence>
+            
               {isGeneratingTopics ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <div className="animate-fade-in">
                   {[...Array(5)].map((_, i) => (
                     <div key={`skel-${i}`} className="magic-skeleton magic-skeleton-topic"></div>
                   ))}
-                </motion.div>
+                </div>
               ) : (
                 topics.map((topic, i) => (
-                  <motion.div 
+                  <div 
                     key={topic.id} 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="cf-topic-row"
+                    className="cf-topic-row animate-fade-in"
+                    style={{ animationDelay: `${i * 0.05}s` }}
                   >
                     <input 
                       type="checkbox" 
@@ -379,10 +376,10 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
                       onChange={(e) => updateTopicTitle(topic.id, e.target.value)}
                     />
                     <button className="btn btn-ghost btn-sm" onClick={() => removeTopic(topic.id)}>✕</button>
-                  </motion.div>
+                  </div>
                 ))
               )}
-            </AnimatePresence>
+            
             {!isGeneratingTopics && (
               <button className="btn btn-dashed mt-2" onClick={handleAddCustomTopic} style={{ width: '100%' }}>
                 + Добавить свою тему
@@ -433,18 +430,18 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
       </div>
 
       {/* 5. ИТОГОВЫЕ СЦЕНАРИИ */}
-      <AnimatePresence>
+      
         {isGeneratingScripts && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <div className="animate-fade-in">
              {[...Array(topics.filter(t => t.selected).length || 1)].map((_, i) => (
                <div key={`skel-s-${i}`} className="magic-skeleton magic-skeleton-script"></div>
              ))}
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      
 
       {!isGeneratingScripts && scripts.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card mt-4">
+        <div className="card mt-4 animate-fade-in">
           <div className="card-body">
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                <div>
@@ -492,7 +489,7 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
                )}
              </div>
           </div>
-        </motion.div>
+        </div>
       )}
     </div>
   );

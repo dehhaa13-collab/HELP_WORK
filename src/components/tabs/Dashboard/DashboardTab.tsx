@@ -3,7 +3,7 @@
    Главная навигационная панель контента
    ============================================ */
 
-import { motion } from 'framer-motion';
+
 import { usePersistedState } from '../../../utils/usePersistedState';
 import { exportScriptsToWord, exportContentPlanCSV } from '../../../utils/exportUtils';
 import { useToastStore } from '../../../store';
@@ -45,7 +45,7 @@ export function DashboardTab({ clientId }: Props) {
 
   return (
     <div className="scenarios-tab content-factory">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card mb-4" style={{ marginBottom: '1.5rem' }}>
+      <div className="card mb-4 animate-fade-in" style={{ marginBottom: '1.5rem' }}>
         <div className="card-body">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
@@ -149,7 +149,7 @@ export function DashboardTab({ clientId }: Props) {
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

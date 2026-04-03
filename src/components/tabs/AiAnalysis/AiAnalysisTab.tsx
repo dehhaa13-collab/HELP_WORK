@@ -5,12 +5,11 @@
 
 import { z } from 'zod';
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useToastStore } from '../../../store';
 import { fetchGeminiWithSchema } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
 import type { TrafficLightStatus } from '../../../types';
-import heic2any from 'heic2any';
+// heic2any is imported dynamically only when HEIC files are detected (saves ~1.3MB from initial bundle)
 import './AiAnalysisTab.css';
 
 interface Props {
@@ -104,6 +103,8 @@ export function AiAnalysisTab({ clientId }: Props) {
         file.name.toLowerCase().endsWith('.heic')
       ) {
         addToast('info', 'Конвертация', 'Адаптируем формат iPhone (HEIC) для ИИ...');
+        // Dynamic import: heic2any (~1.3MB) loads ONLY when needed
+        const { default: heic2any } = await import('heic2any');
         const convertedBlob = await heic2any({
           blob: file,
           toType: 'image/jpeg',
@@ -363,9 +364,8 @@ export function AiAnalysisTab({ clientId }: Props) {
       </div>
 
       {/* Traffic Light & Skel */}
-      <AnimatePresence>
-        {isAnalyzing && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      {isAnalyzing && (
+          <div className="animate-fade-in">
              <div className="card ai-traffic-card" style={{ marginBottom: "1rem" }}>
                <div className="card-body">
                  <div className="magic-skeleton" style={{ height: "100px", width: "100%" }}></div>
@@ -376,12 +376,11 @@ export function AiAnalysisTab({ clientId }: Props) {
                  <div className="magic-skeleton" style={{ height: "160px", width: "100%" }}></div>
                </div>
              </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+      )}
 
       {!isAnalyzing && (result.avatar || result.bio || result.highlights || result.feed) && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card ai-traffic-card">
+        <div className="card ai-traffic-card animate-fade-in">
           <div className="card-body">
             <h3 className="ai-section-title">🚦 Оценка профиля (Светофор)</h3>
             <p className="ai-section-desc">
@@ -394,12 +393,12 @@ export function AiAnalysisTab({ clientId }: Props) {
               {renderTrafficLight('Визуал ленты', 'feed')}
             </div>
           </div>
-        </motion.div>
+        </div>
       )}
 
       {/* AI Summary */}
       {!isAnalyzing && result.aiSummary && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card ai-summary-card" style={{ marginTop: "1rem" }}>
+        <div className="card ai-summary-card animate-fade-in" style={{ marginTop: "1rem" }}>
           <div className="card-body">
             <h3 className="ai-section-title">📋 Подробный анализ от ИИ</h3>
             <div className="ai-summary-text">
@@ -408,7 +407,7 @@ export function AiAnalysisTab({ clientId }: Props) {
               ))}
             </div>
           </div>
-        </motion.div>
+        </div>
       )}
     </div>
   );

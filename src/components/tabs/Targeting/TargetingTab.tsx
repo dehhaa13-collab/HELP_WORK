@@ -118,30 +118,31 @@ export function TargetingTab({ clientId }: Props) {
                   <span className="editing-num-badge">{item.id}</span>
                   <input
                     type="text"
-                    className="input targeting-name-input"
+                    className="input"
+                    style={{ flex: 1 }}
                     placeholder={`Публикация #${item.id}`}
                     value={item.name || ''}
                     onChange={(e) => updateName(item.id, e.target.value)}
                   />
                   <div className="targeting-item-toggles">
-                    <label className="editing-checkbox">
+                    <label className="magic-checkbox-wrapper">
                       <input
                         type="checkbox"
+                        className="magic-checkbox"
                         checked={item.isPromoted}
                         onChange={() => togglePromoted(item.id)}
                       />
-                      <span className="editing-checkbox-custom" />
-                      <span className="editing-checkbox-label">В таргете</span>
+                      <span className="magic-checkbox-label">В таргете</span>
                     </label>
-                    <label className="editing-checkbox">
+                    <label className="magic-checkbox-wrapper">
                       <input
                         type="checkbox"
+                        className="magic-checkbox"
                         checked={item.campaignFinished}
                         onChange={() => toggleFinished(item.id)}
                         disabled={!item.isPromoted}
                       />
-                      <span className="editing-checkbox-custom" />
-                      <span className="editing-checkbox-label">Завершено</span>
+                      <span className="magic-checkbox-label">Завершено</span>
                     </label>
                   </div>
                 </div>

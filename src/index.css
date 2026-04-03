@@ -292,6 +292,63 @@ textarea {
   background-color: #FFFFFF;
 }
 
+/* === UI Controls === */
+.magic-checkbox-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+}
+
+.magic-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-border);
+  border-radius: 6px;
+  background-color: var(--color-surface);
+  position: relative;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin: 0;
+}
+
+.magic-checkbox:checked {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.magic-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  width: 4px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2.5px 2.5px 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.magic-checkbox:hover:not(:disabled) {
+  border-color: var(--color-primary-light);
+}
+
+.magic-checkbox:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: var(--color-border);
+  background-color: var(--color-bg);
+}
+
+.magic-checkbox-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
 /* === Select === */
 select.input {
   appearance: none;

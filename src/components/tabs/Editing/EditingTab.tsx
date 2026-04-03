@@ -110,36 +110,36 @@ export function EditingTab({ clientId }: Props) {
                     {pubName || <span className="editing-pub-placeholder">Публикация #{item.id}</span>}
                   </span>
                   <span className="editing-col-check">
-                    <label className="editing-checkbox">
+                    <label className="magic-checkbox-wrapper">
                       <input
                         type="checkbox"
+                        className="magic-checkbox"
                         checked={item.editingDone}
                         onChange={() => toggleField(item.id, 'editingDone')}
                       />
-                      <span className="editing-checkbox-custom" />
-                      <span className="editing-checkbox-label">Готово</span>
+                      <span className="magic-checkbox-label">Готово</span>
                     </label>
                   </span>
                   <span className="editing-col-check">
-                    <label className="editing-checkbox">
+                    <label className="magic-checkbox-wrapper">
                       <input
                         type="checkbox"
+                        className="magic-checkbox"
                         checked={item.coverDone}
                         onChange={() => toggleField(item.id, 'coverDone')}
                       />
-                      <span className="editing-checkbox-custom" />
-                      <span className="editing-checkbox-label">Готова</span>
+                      <span className="magic-checkbox-label">Готова</span>
                     </label>
                   </span>
                   <span className="editing-col-check">
-                    <label className="editing-checkbox">
+                    <label className="magic-checkbox-wrapper">
                       <input
                         type="checkbox"
+                        className="magic-checkbox"
                         checked={item.deliveredToClient}
                         onChange={() => toggleField(item.id, 'deliveredToClient')}
                       />
-                      <span className="editing-checkbox-custom" />
-                      <span className="editing-checkbox-label">Да</span>
+                      <span className="magic-checkbox-label">Да</span>
                     </label>
                   </span>
                 </div>

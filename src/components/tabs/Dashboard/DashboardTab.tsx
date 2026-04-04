@@ -1,13 +1,13 @@
 /* ============================================
    Вкладка 0: Дашборд (Kanban Библиотека)
-   Главная навигационная панель контента
+   Statuses автоматически синхронизируются с Монтажом
    ============================================ */
 
-
+import { useEffect } from 'react';
 import { usePersistedState } from '../../../utils/usePersistedState';
 import { exportScriptsToWord, exportContentPlanCSV } from '../../../utils/exportUtils';
 import { useToastStore } from '../../../store';
-import '../Scenarios/ScenariosTab.css'; // Переиспользуем стили Kanban оттуда
+import '../Scenarios/ScenariosTab.css';
 
 interface Props {
   clientId: string;
@@ -28,6 +28,13 @@ interface ScriptItem {
   duration?: string;
 }
 
+interface EditItem {
+  id: number;
+  editingDone: boolean;
+  coverDone: boolean;
+  deliveredToClient: boolean;
+}
+
 export function DashboardTab({ clientId }: Props) {
   const addToast = useToastStore((s) => s.addToast);
   const [scripts, setScripts] = usePersistedState<ScriptItem[]>(`hw_scenarios_scripts_${clientId}`, []);
@@ -38,6 +45,55 @@ export function DashboardTab({ clientId }: Props) {
   const [targetItems] = usePersistedState<{ id: number; name: string }[]>(
     `hw_targeting_${clientId}`, []
   );
+
+  // Читаем данные Монтажа для авто-синхронизации
+  const [editingItems] = usePersistedState<EditItem[]>(`hw_editing_${clientId}`, []);
+
+  // === Авто-синхронизация статусов Kanban с Монтажом ===
+  // Логика: скрипт i → публикация i+1 в Монтаже
+  // deliveredToClient → published
+  // editingDone → editing  
+  // скрипт имеет текст → script
+  // иначе → idea
+  useEffect(() => {
+    if (scripts.length === 0) return;
+
+    let changed = false;
+    const updated = scripts.map((script, index) => {
+      const editItem = editingItems.find(e => e.id === index + 1);
+      let newStatus: ScriptStatus = script.status || 'idea';
+
+      if (editItem) {
+        if (editItem.deliveredToClient && editItem.editingDone && editItem.coverDone) {
+          newStatus = 'published';
+        } else if (editItem.editingDone) {
+          newStatus = 'editing';
+        }
+      }
+
+      // Только двигаем вперёд (не назад), чтобы ручное перетаскивание тоже работало
+      const ORDER: ScriptStatus[] = ['idea', 'script', 'shooting', 'editing', 'published'];
+      const currentRank = ORDER.indexOf(script.status || 'idea');
+      const newRank = ORDER.indexOf(newStatus);
+
+      if (newRank > currentRank) {
+        changed = true;
+        return { ...script, status: newStatus };
+      }
+      
+      // Если скрипт всё ещё в "idea", но имеет текст — ставим "script"
+      if ((script.status === undefined || script.status === 'idea') && script.body) {
+        changed = true;
+        return { ...script, status: 'script' as ScriptStatus };
+      }
+
+      return script;
+    });
+
+    if (changed) {
+      setScripts(updated);
+    }
+  }, [editingItems]);
 
   const removeScript = (id: number) => {
     setScripts(scripts.filter(s => s.id !== id));
@@ -50,7 +106,7 @@ export function DashboardTab({ clientId }: Props) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <h3 className="ai-section-title" style={{ margin: 0 }}>🗄️ Библиотека контента и Kanban</h3>
-              <p className="ai-section-desc" style={{ margin: 0, opacity: 0.8 }}>Управляйте контентом. Сценарии генерируются во вкладке "Сценарии".</p>
+              <p className="ai-section-desc" style={{ margin: 0, opacity: 0.8 }}>Статусы обновляются автоматически из вкладки «Монтаж». Можно также перетаскивать вручную.</p>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button 

@@ -213,7 +213,7 @@ ${competitors ? 'Анализ трендов и конкурентов:\n' + com
       };
 
       const prompt = `Ниша: ${clientNiche}
-Напиши вирусные сценарии Reels для следующих тем:
+Напиши вирусные сценарии Reels для следующих тем (РОВНО ${topicsToProcess.length} сценариев, по одному на каждую тему):
 ${selectedTitles}
 
 ПАРАМЕТРЫ ЗАКАЗЧИКА:
@@ -227,6 +227,8 @@ ${selectedTitles}
 4. cta (Призыв к действию)
 5. music (Настроение музыки)
 6. duration (Ожидаемый хронометраж)
+
+ВАЖНО: Верни РОВНО ${topicsToProcess.length} объектов — по одному на каждую тему выше. Не больше и не меньше.
 
 ВЕРНИ ТОЛЬКО ВАЛИДНЫЙ JSON-МАССИВ С ОБЪЕКТАМИ (без \`\`\` или текста):
 [
@@ -260,7 +262,10 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
 
       if (generated.length === 0) throw new Error('Empty array');
 
-      const newScripts = generated.map((s, i) => ({
+      // Обрезаем до нужного количества (ИИ иногда игнорирует ограничение)
+      const trimmed = generated.slice(0, topicsToProcess.length);
+
+      const newScripts = trimmed.map((s, i) => ({
         id: Date.now() + i,
         topicTitle: s.topicTitle || topicsToProcess[i]?.title || `Тема`,
         status: 'idea' as ScriptStatus,

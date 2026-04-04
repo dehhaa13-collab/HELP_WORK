@@ -158,7 +158,8 @@ ${competitors ? 'Анализ трендов и конкурентов:\n' + com
       if (error instanceof z.ZodError) {
          addToast('error', 'Ошибка структуры ИИ', 'ИИ выдал некорректный ответ (не прошел валидацию Zod). Попробуйте еще раз.');
       } else {
-         addToast('error', 'Ошибка генерации', 'ИИ вернул неверный формат.');
+         const errMsg = error instanceof Error ? error.message : 'ИИ вернул неверный формат.';
+         addToast('error', 'Ошибка генерации', errMsg);
       }
     } finally {
       setIsGeneratingTopics(false);
@@ -294,7 +295,8 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
       if (error instanceof z.ZodError) {
          addToast('error', 'Ошибка генерации', 'ИИ вернул ответ в неверном формате (Zod). Повторите генерацию.');
       } else {
-         addToast('error', 'Ошибка', 'Сбой при генерации сценариев.');
+         const errMsg = error instanceof Error ? error.message : 'Сбой при генерации сценариев.';
+         addToast('error', 'Ошибка генерации', errMsg);
       }
     } finally {
       setIsGeneratingScripts(false);

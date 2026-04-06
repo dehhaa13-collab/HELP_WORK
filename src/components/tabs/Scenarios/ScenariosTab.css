@@ -381,11 +381,38 @@
   .kanban-board {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    padding-bottom: var(--space-3);
   }
 
   .kanban-column {
-    flex: 0 0 260px;
-    min-width: 260px;
+    flex: 0 0 280px;
+    min-width: 280px;
+    scroll-snap-align: start;
+  }
+
+  .kanban-card {
+    cursor: default;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .kanban-card-title {
+    font-size: var(--font-size-sm);
+  }
+
+  .kanban-column-header {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-sm);
+  }
+
+  .kanban-card-actions button {
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 

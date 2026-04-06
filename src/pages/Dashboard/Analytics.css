@@ -320,27 +320,116 @@
 
   .analytics-page {
     padding: var(--space-4);
+    gap: var(--space-4);
+  }
+
+  .analytics-page-title {
+    font-size: var(--font-size-lg);
   }
 
   .analytics-kpi-row {
     grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  .analytics-kpi .card-body {
+    padding: var(--space-3);
+    gap: var(--space-1);
+  }
+
+  .analytics-kpi-emoji {
+    font-size: 24px;
+  }
+
+  .analytics-kpi-value {
+    font-size: 20px;
+  }
+
+  .analytics-kpi-label {
+    font-size: 10px;
   }
 
   .analytics-two-col {
     grid-template-columns: 1fr;
+    gap: var(--space-4);
   }
   
   .analytics-funnel-row {
     grid-template-columns: 100px 1fr 32px;
+    gap: var(--space-2);
   }
 
+  .analytics-funnel-label {
+    font-size: var(--font-size-xs);
+  }
+
+  .analytics-funnel-bar-track {
+    height: 18px;
+  }
+
+  .analytics-section-title {
+    font-size: var(--font-size-base);
+  }
+
+  /* Scrollable finance table on mobile */
+  .analytics-finance-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 calc(-1 * var(--space-4));
+    padding: 0 var(--space-4);
+  }
+
+  .analytics-finance-table {
+    min-width: 520px;
+  }
+
+  .analytics-finance-table td,
+  .analytics-finance-table th {
+    padding: var(--space-2);
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
+  }
+
+  /* Timeline compact */
   .analytics-timeline-row {
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-1);
+    grid-template-columns: 1fr auto;
+    gap: var(--space-2);
+    padding: var(--space-2);
   }
 
-  .analytics-timeline-stage,
-  .analytics-timeline-duration {
+  .analytics-timeline-name {
+    font-size: var(--font-size-xs);
+  }
+
+  .analytics-timeline-date {
     display: none;
+  }
+
+  .analytics-timeline-stage .badge {
+    font-size: 10px !important;
+    padding: 2px 6px;
+  }
+
+  .analytics-timeline-duration {
+    font-size: 10px;
+  }
+}
+
+/* Extra small phones */
+@media (max-width: 380px) {
+  .analytics-page {
+    padding: var(--space-3);
+  }
+
+  .analytics-kpi-value {
+    font-size: 18px;
+  }
+
+  .analytics-funnel-row {
+    grid-template-columns: 80px 1fr 28px;
+  }
+
+  .analytics-funnel-label {
+    font-size: 10px;
   }
 }

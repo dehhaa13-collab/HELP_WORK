@@ -350,6 +350,10 @@
     padding-top: calc(var(--space-3) + env(safe-area-inset-top, 0px));
   }
 
+  .dashboard-header-left {
+    gap: var(--space-3);
+  }
+
   .dashboard-logo-icon {
     width: 40px;
     height: 40px;
@@ -363,6 +367,30 @@
 
   .dashboard-welcome {
     display: none;
+  }
+
+  .dashboard-header-right {
+    gap: var(--space-2);
+  }
+
+  .dashboard-client-count {
+    font-size: var(--font-size-xs);
+    padding: var(--space-1) var(--space-2);
+  }
+
+  /* Tab switcher mobile */
+  .dash-tab-switcher {
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .dash-tab-btn {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--font-size-xs);
+    flex: 1;
+    justify-content: center;
+    min-height: 40px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .pipeline-legend {
@@ -393,6 +421,16 @@
     gap: var(--space-3);
   }
 
+  .dashboard-section-title {
+    font-size: var(--font-size-base);
+  }
+
+  /* Card improvements */
+  .client-card {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   /* On touch devices, delete button is always visible */
   .client-delete {
     opacity: 1;
@@ -401,6 +439,26 @@
   /* Card should not hover-transform on mobile (feels janky on touch) */
   .client-card:hover {
     transform: none;
+  }
+
+  /* Pipeline dots - make touch-friendly */
+  .stage-dot {
+    width: 10px;
+    height: 10px;
+  }
+
+  .client-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: var(--font-size-lg);
+  }
+
+  .client-name {
+    font-size: var(--font-size-sm);
+  }
+
+  .client-instagram {
+    font-size: var(--font-size-xs);
   }
 }
 

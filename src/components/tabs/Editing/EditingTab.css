@@ -157,6 +157,19 @@
 
   .editing-checkbox {
     font-size: var(--font-size-xs);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .editing-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+  }
+
+  .editing-pub-input {
+    font-size: var(--font-size-xs);
+    padding: var(--space-1) var(--space-2);
   }
 }
 

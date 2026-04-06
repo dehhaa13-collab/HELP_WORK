@@ -771,14 +771,19 @@ ${selectedTitles}
                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                        <button
-                         className={`btn btn-sm ${script.approved ? 'btn-primary' : 'btn-ghost'}`}
+                         className={`cf-approve-btn ${script.approved ? 'approved' : ''}`}
                          onClick={() => approveScript(script.id)}
-                         title={script.approved ? 'Одобрено ✅' : 'Одобрить сценарий'}
-                         style={{ minWidth: '36px', padding: '4px 8px', fontSize: '16px' }}
+                         title={script.approved ? 'Одобрено' : 'Одобрить сценарий'}
                        >
-                         {script.approved ? '✅' : '☐'}
+                         {script.approved && (
+                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                             <polyline points="20 6 9 17 4 12"></polyline>
+                           </svg>
+                         )}
                        </button>
-                       <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--color-text)' }}>{script.topicTitle}</h4>
+                       <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--color-text)', cursor: 'pointer' }} onClick={() => approveScript(script.id)}>
+                         {script.topicTitle}
+                       </h4>
                      </div>
                      <button 
                        className="btn btn-ghost btn-sm"

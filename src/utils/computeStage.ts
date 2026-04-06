@@ -16,7 +16,11 @@ export function computeClientStage(clientId: string): PipelineStage {
   const get = <T>(key: string, fallback: T): T => {
     try {
       const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
+      if (!raw) return fallback;
+      const parsed = JSON.parse(raw);
+      if (parsed === null) return fallback;
+      if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
+      return parsed as T;
     } catch {
       return fallback;
     }

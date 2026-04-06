@@ -28,7 +28,7 @@
 
 .editing-table-header {
   display: grid;
-  grid-template-columns: 50px 2fr 1fr 1fr 1fr;
+  grid-template-columns: 40px 2fr 1fr 1fr 1fr 1fr;
   padding: var(--space-3) var(--space-4);
   background-color: var(--color-bg);
   font-size: var(--font-size-xs);
@@ -41,7 +41,7 @@
 
 .editing-table-row {
   display: grid;
-  grid-template-columns: 50px 2fr 1fr 1fr 1fr;
+  grid-template-columns: 40px 2fr 1fr 1fr 1fr 1fr;
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   transition: background-color var(--transition-fast);
@@ -149,10 +149,10 @@
 
   .editing-table-header,
   .editing-table-row {
-    grid-template-columns: 40px 1.5fr 1fr 1fr 1fr;
+    grid-template-columns: 36px 1.5fr 1fr 1fr 1fr 1fr;
     padding: var(--space-2) var(--space-3);
     font-size: var(--font-size-xs);
-    min-width: 420px;
+    min-width: 560px;
   }
 
   .editing-checkbox {

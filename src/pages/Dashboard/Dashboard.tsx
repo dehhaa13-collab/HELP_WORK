@@ -4,6 +4,7 @@ import { useClients, useAddClient, useUpdateClient, useRemoveClient } from '../.
 import { PIPELINE_STAGES } from '../../types';
 import type { Client } from '../../types';
 import { computeClientStage } from '../../utils/computeStage';
+import { trackStageChange, getDaysOnCurrentStage, getIdleLevel, getIdleHint } from '../../utils/stageTracker';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import './Dashboard.css';
 
@@ -122,7 +123,14 @@ export function Dashboard() {
     const computedStage = computeClientStage(client.id);
     const stage = PIPELINE_STAGES.find((s) => s.key === computedStage);
     const index = PIPELINE_STAGES.findIndex((s) => s.key === computedStage);
-    return { stage, index, total: PIPELINE_STAGES.length };
+
+    // Отслеживаем смену этапа
+    trackStageChange(client.id, computedStage);
+    const daysIdle = getDaysOnCurrentStage(client.id, client.createdAt);
+    const idleLevel = getIdleLevel(daysIdle);
+    const idleHint = getIdleHint(daysIdle);
+
+    return { stage, index, total: PIPELINE_STAGES.length, daysIdle, idleLevel, idleHint };
   };
 
   return (
@@ -222,14 +230,14 @@ export function Dashboard() {
         ) : (
           <div className="client-grid">
             {clients.map((client) => {
-              const { stage, index, total } = getStageInfo(client);
+              const { stage, index, total, idleLevel, idleHint, daysIdle } = getStageInfo(client);
               const progress = ((index + 1) / total) * 100;
               const isEditing = editingClientId === client.id;
 
               return (
                 <div
                   key={client.id}
-                  className="client-card card"
+                  className={`client-card card ${idleLevel !== 'ok' ? `client-card-idle-${idleLevel}` : ''}`}
                   onClick={() => { if (!isEditing) selectClient(client.id); }}
                   onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !isEditing) { e.preventDefault(); selectClient(client.id); } }}
                   role="button"
@@ -309,6 +317,13 @@ export function Dashboard() {
                         ))}
                       </div>
                     </div>
+
+                    {/* Idle Warning */}
+                    {idleLevel !== 'ok' && daysIdle > 0 && (
+                      <div className={`client-idle-badge client-idle-badge-${idleLevel}`}>
+                        {idleLevel === 'danger' ? '🔴' : '🟡'} {idleHint}
+                      </div>
+                    )}
 
                     {/* Actions */}
                     <div className="client-card-actions">

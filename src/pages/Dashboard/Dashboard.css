@@ -343,6 +343,47 @@
   }
 }
 
+/* === Idle Client Indicators (застой на этапе) === */
+.client-card-idle-warning {
+  border-left: 3px solid #f59e0b;
+  box-shadow: inset 3px 0 0 #f59e0b,
+              0 2px 8px rgba(245, 158, 11, 0.08);
+}
+
+.client-card-idle-danger {
+  border-left: 3px solid #ef4444;
+  box-shadow: inset 3px 0 0 #ef4444,
+              0 2px 8px rgba(239, 68, 68, 0.08);
+}
+
+.client-idle-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 500;
+  width: fit-content;
+  margin-top: var(--space-2);
+  animation: idle-fade-in 0.3s ease;
+}
+
+.client-idle-badge-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+}
+
+.client-idle-badge-danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+@keyframes idle-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .dashboard-header {

@@ -30,6 +30,7 @@ interface ScriptItem {
 
 interface EditItem {
   id: number;
+  sourceReceived: boolean;
   editingDone: boolean;
   coverDone: boolean;
   deliveredToClient: boolean;
@@ -68,6 +69,8 @@ export function DashboardTab({ clientId }: Props) {
           newStatus = 'published';
         } else if (editItem.editingDone) {
           newStatus = 'editing';
+        } else if (editItem.sourceReceived) {
+          newStatus = 'shooting';
         }
       }
 

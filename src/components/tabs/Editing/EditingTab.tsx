@@ -14,6 +14,7 @@ interface Props {
 
 interface EditItem {
   id: number;
+  sourceReceived: boolean;
   editingDone: boolean;
   coverDone: boolean;
   deliveredToClient: boolean;
@@ -38,6 +39,7 @@ export function EditingTab({ clientId }: Props) {
     `hw_editing_${clientId}`,
     Array.from({ length: 10 }, (_, i) => ({
       id: i + 1,
+      sourceReceived: false,
       editingDone: false,
       coverDone: false,
       deliveredToClient: false,
@@ -50,6 +52,7 @@ export function EditingTab({ clientId }: Props) {
       // Добавить недостающие
       const extra = Array.from({ length: slotCount - items.length }, (_, i) => ({
         id: items.length + i + 1,
+        sourceReceived: false,
         editingDone: false,
         coverDone: false,
         deliveredToClient: false,
@@ -90,7 +93,7 @@ export function EditingTab({ clientId }: Props) {
     }
   };
 
-  const doneCount = syncedItems.filter((i) => i.editingDone && i.coverDone && i.deliveredToClient).length;
+  const doneCount = syncedItems.filter((i) => i.sourceReceived && i.editingDone && i.coverDone && i.deliveredToClient).length;
 
   return (
     <div className="editing-tab">
@@ -112,12 +115,13 @@ export function EditingTab({ clientId }: Props) {
             <div className="editing-table-header">
               <span className="editing-col-num">#</span>
               <span className="editing-col-name">Публикация</span>
+              <span className="editing-col-check">Исходник</span>
               <span className="editing-col-check">Монтаж</span>
               <span className="editing-col-check">Обложка</span>
               <span className="editing-col-check">Отдано</span>
             </div>
             {syncedItems.map((item) => {
-              const allDone = item.editingDone && item.coverDone && item.deliveredToClient;
+              const allDone = item.sourceReceived && item.editingDone && item.coverDone && item.deliveredToClient;
               const pubName = getPubName(item.id);
               return (
                 <div key={item.id} className={`editing-table-row ${allDone ? 'editing-row-done' : ''}`}>
@@ -133,6 +137,17 @@ export function EditingTab({ clientId }: Props) {
                       onChange={(e) => updatePubName(item.id, e.target.value)}
                       style={{ width: '100%', maxWidth: '280px', height: '32px', fontSize: '13px', backgroundColor: 'transparent' }}
                     />
+                  </span>
+                  <span className="editing-col-check">
+                    <label className="magic-checkbox-wrapper">
+                      <input
+                        type="checkbox"
+                        className="magic-checkbox"
+                        checked={item.sourceReceived || false}
+                        onChange={() => toggleField(item.id, 'sourceReceived')}
+                      />
+                      <span className="magic-checkbox-label">Есть</span>
+                    </label>
                   </span>
                   <span className="editing-col-check">
                     <label className="magic-checkbox-wrapper">

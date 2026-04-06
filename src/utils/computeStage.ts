@@ -40,16 +40,17 @@ export function computeClientStage(clientId: string): PipelineStage {
   const hasScripts = scripts.length > 0;
   if (!hasScripts) return 'topics';
 
-  // 5. Исходники — хотя бы 1 скрипт в статусе "shooting" или дальше
+  // 5. Исходники — хотя бы 1 публикация получила исходник
+  const editingItems = get<{ id: number; sourceReceived: boolean; editingDone: boolean; coverDone: boolean; deliveredToClient: boolean }[]>(`hw_editing_${clientId}`, []);
+  const hasSourceReceived = editingItems.some(i => i.sourceReceived);
   const hasMovedToShooting = scripts.some(s => s.status === 'shooting' || s.status === 'editing' || s.status === 'published');
-  if (!hasMovedToShooting) return 'scripts';
+  if (!hasSourceReceived && !hasMovedToShooting) return 'scripts';
 
   // 6. Производство — хотя бы 1 скрипт в статусе "editing" или дальше
   const hasInEditing = scripts.some(s => s.status === 'editing' || s.status === 'published');
   if (!hasInEditing) return 'sources';
 
   // 7. Готовность — хотя бы 1 единица монтажа отмечена как "editingDone"
-  const editingItems = get<{ id: number; editingDone: boolean; coverDone: boolean; deliveredToClient: boolean }[]>(`hw_editing_${clientId}`, []);
   const hasSomethingEdited = editingItems.some(i => i.editingDone);
   if (!hasSomethingEdited) return 'production';
 

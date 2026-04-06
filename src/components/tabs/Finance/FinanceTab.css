@@ -1,0 +1,222 @@
+/* Finance Tab — Стили */
+
+.finance-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Summary Cards */
+.finance-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+.finance-summary-card {
+  text-align: center;
+}
+
+.finance-summary-card .card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.finance-summary-emoji {
+  font-size: 28px;
+}
+
+.finance-summary-value {
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.finance-summary-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.finance-value-positive {
+  color: var(--color-success);
+}
+
+.finance-value-negative {
+  color: var(--color-danger);
+}
+
+.finance-value-neutral {
+  color: var(--color-primary);
+}
+
+/* Profit bar */
+.finance-profit-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.finance-profit-track {
+  height: 8px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.finance-profit-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+}
+
+.finance-profit-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* Income section */
+.finance-income-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.finance-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.finance-field-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.finance-field-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.finance-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.finance-input-wrapper .input {
+  padding-left: 28px;
+  font-variant-numeric: tabular-nums;
+}
+
+.finance-currency {
+  position: absolute;
+  left: 10px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  pointer-events: none;
+}
+
+/* Expenses */
+.finance-expenses-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.finance-expense-row {
+  display: grid;
+  grid-template-columns: 1fr 140px 40px;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.finance-expense-row .input {
+  font-variant-numeric: tabular-nums;
+}
+
+.finance-expense-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-3);
+  font-weight: 600;
+}
+
+.finance-expense-total-value {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  color: var(--color-danger);
+  font-variant-numeric: tabular-nums;
+}
+
+.finance-remove-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 16px;
+  padding: 0;
+}
+
+.finance-remove-btn:hover {
+  background: var(--color-danger-bg, #fef2f2);
+  color: var(--color-danger);
+}
+
+/* Quick presets */
+.finance-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.finance-preset-btn {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.finance-preset-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .finance-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .finance-income-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .finance-expense-row {
+    grid-template-columns: 1fr 100px 36px;
+  }
+}

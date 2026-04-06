@@ -16,6 +16,7 @@ const AiAnalysisTab = lazy(() => import('../../components/tabs/AiAnalysis/AiAnal
 const FormatsTab = lazy(() => import('../../components/tabs/Formats/FormatsTab').then(m => ({ default: m.FormatsTab })));
 const ScenariosTab = lazy(() => import('../../components/tabs/Scenarios/ScenariosTab').then(m => ({ default: m.ScenariosTab })));
 const EditingTab = lazy(() => import('../../components/tabs/Editing/EditingTab').then(m => ({ default: m.EditingTab })));
+const FinanceTab = lazy(() => import('../../components/tabs/Finance/FinanceTab').then(m => ({ default: m.FinanceTab })));
 const TargetingTab = lazy(() => import('../../components/tabs/Targeting/TargetingTab').then(m => ({ default: m.TargetingTab })));
 const FeedbackTab = lazy(() => import('../../components/tabs/Feedback/FeedbackTab').then(m => ({ default: m.FeedbackTab })));
 
@@ -29,7 +30,7 @@ function TabLoader() {
   );
 }
 
-type TabKey = 'dashboard' | 'ai-analysis' | 'formats' | 'scenarios' | 'editing' | 'targeting' | 'feedback';
+type TabKey = 'dashboard' | 'ai-analysis' | 'formats' | 'scenarios' | 'editing' | 'finance' | 'targeting' | 'feedback';
 
 interface Tab {
   key: TabKey;
@@ -43,6 +44,7 @@ const TABS: Tab[] = [
   { key: 'formats', label: 'Форматы', emoji: '📱' },
   { key: 'scenarios', label: 'Сценарии', emoji: '📝' },
   { key: 'editing', label: 'Монтаж', emoji: '✂️' },
+  { key: 'finance', label: 'Финансы', emoji: '💰' },
   { key: 'targeting', label: 'Таргет', emoji: '📊' },
   { key: 'feedback', label: 'Отзывы', emoji: '💬' },
 ];
@@ -95,6 +97,8 @@ export function ClientWorkspace() {
         return <ScenariosTab clientId={client.id} />;
       case 'editing':
         return <EditingTab clientId={client.id} />;
+      case 'finance':
+        return <FinanceTab clientId={client.id} />;
       case 'targeting':
         return <TargetingTab clientId={client.id} />;
       case 'feedback':

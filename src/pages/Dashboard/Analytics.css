@@ -1,0 +1,346 @@
+/* ============================================
+   Analytics Dashboard — CSS
+   Полноценная аналитика по всем клиентам
+   ============================================ */
+
+/* Tab Switcher */
+.dash-tab-switcher {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-8);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dash-tab-btn {
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dash-tab-btn:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.dash-tab-btn-active {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* Analytics page */
+.analytics-page {
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.analytics-page-title {
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.analytics-page-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+/* KPI Row */
+.analytics-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.analytics-kpi {
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.analytics-kpi .card-body {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.analytics-kpi-emoji {
+  font-size: 32px;
+}
+
+.analytics-kpi-value {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-kpi-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.analytics-kpi-sub {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+/* Section */
+.analytics-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.analytics-section-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Two Col */
+.analytics-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+}
+
+/* Funnel */
+.analytics-funnel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.analytics-funnel-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 40px;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.analytics-funnel-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.analytics-funnel-bar-track {
+  height: 24px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.analytics-funnel-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-sm);
+  transition: width 0.5s ease;
+  min-width: 2px;
+}
+
+.analytics-funnel-count {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Finance Table */
+.analytics-finance-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.analytics-finance-table th {
+  text-align: left;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.analytics-finance-table th:not(:first-child) {
+  text-align: right;
+}
+
+.analytics-finance-table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-finance-table td:not(:first-child) {
+  text-align: right;
+}
+
+.analytics-finance-table tr:last-child td {
+  border-bottom: none;
+}
+
+.analytics-finance-table .finance-client-name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.analytics-finance-table .finance-positive {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.analytics-finance-table .finance-negative {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.analytics-finance-table .finance-warning {
+  color: var(--color-warning, #EAB308);
+  font-weight: 600;
+}
+
+.analytics-finance-table tfoot td {
+  font-weight: 700;
+  font-size: var(--font-size-base);
+  border-top: 2px solid var(--color-border);
+  padding-top: var(--space-3);
+}
+
+/* Client timeline */
+.analytics-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.analytics-timeline-row {
+  display: grid;
+  grid-template-columns: 140px 80px 1fr 100px;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.analytics-timeline-row:hover {
+  background: var(--color-bg);
+}
+
+.analytics-timeline-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analytics-timeline-date {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-timeline-stage {
+  font-size: var(--font-size-xs);
+}
+
+.analytics-timeline-duration {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  text-align: right;
+}
+
+/* Expense breakdown */
+.analytics-expense-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.analytics-expense-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.analytics-expense-name {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.analytics-expense-value {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-danger);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dash-tab-switcher {
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .analytics-page {
+    padding: var(--space-4);
+  }
+
+  .analytics-kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .analytics-two-col {
+    grid-template-columns: 1fr;
+  }
+  
+  .analytics-funnel-row {
+    grid-template-columns: 100px 1fr 32px;
+  }
+
+  .analytics-timeline-row {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-1);
+  }
+
+  .analytics-timeline-stage,
+  .analytics-timeline-duration {
+    display: none;
+  }
+}

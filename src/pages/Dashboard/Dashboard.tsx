@@ -4,6 +4,7 @@ import { useClients, useAddClient, useUpdateClient, useRemoveClient } from '../.
 import { PIPELINE_STAGES } from '../../types';
 import type { Client } from '../../types';
 import { computeClientStage } from '../../utils/computeStage';
+import { AnalyticsDashboard } from './AnalyticsDashboard';
 import './Dashboard.css';
 
 export function Dashboard() {
@@ -31,6 +32,7 @@ export function Dashboard() {
   const [newInstagram, setNewInstagram] = useState('');
   const [newComment, setNewComment] = useState('');
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [dashView, setDashView] = useState<'clients' | 'analytics'>('clients');
 
   // Inline editing
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
@@ -144,6 +146,26 @@ export function Dashboard() {
         </div>
       </header>
 
+      {/* View Switcher */}
+      <div className="dash-tab-switcher">
+        <button
+          className={`dash-tab-btn ${dashView === 'clients' ? 'dash-tab-btn-active' : ''}`}
+          onClick={() => setDashView('clients')}
+        >
+          👥 Клиенты
+        </button>
+        <button
+          className={`dash-tab-btn ${dashView === 'analytics' ? 'dash-tab-btn-active' : ''}`}
+          onClick={() => setDashView('analytics')}
+        >
+          📊 Аналитика
+        </button>
+      </div>
+
+      {dashView === 'analytics' ? (
+        <AnalyticsDashboard clients={clients} />
+      ) : (
+      <>
       {/* Pipeline Legend */}
       <div className="pipeline-legend">
         {PIPELINE_STAGES.map((stage, i) => (
@@ -307,6 +329,8 @@ export function Dashboard() {
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* Add Client Modal */}
       {showAddModal && (

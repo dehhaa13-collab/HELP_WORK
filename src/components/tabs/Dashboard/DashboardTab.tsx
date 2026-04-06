@@ -1,6 +1,11 @@
 /* ============================================
    Вкладка 0: Дашборд (Kanban Библиотека)
-   Statuses автоматически синхронизируются с Монтажом
+   Статусы:
+   - idea: сгенерированный сценарий (ещё не одобрен)
+   - script: одобренный сценарий (пользователь поставил ✅)
+   - shooting: исходник получен (Монтаж: sourceReceived)
+   - editing: смонтировано (Монтаж: editingDone)
+   - published: полностью готово (Монтаж: все галочки)
    ============================================ */
 
 import { useEffect } from 'react';
@@ -19,6 +24,7 @@ interface ScriptItem {
   id: number;
   topicTitle: string;
   status?: ScriptStatus;
+  approved?: boolean;
   content?: string;
   hook?: string;
   visuals?: string;
@@ -51,18 +57,32 @@ export function DashboardTab({ clientId }: Props) {
   const [editingItems] = usePersistedState<EditItem[]>(`hw_editing_${clientId}`, []);
 
   // === Авто-синхронизация статусов Kanban с Монтажом ===
-  // Логика: скрипт i → публикация i+1 в Монтаже
-  // deliveredToClient → published
-  // editingDone → editing  
-  // скрипт имеет текст → script
-  // иначе → idea
+  // Только для ОДОБРЕННЫХ скриптов (approved === true)
+  // Одобренный скрипт i → публикация (порядковый номер среди одобренных) в Монтаже
   useEffect(() => {
     if (scripts.length === 0) return;
 
     let changed = false;
-    const updated = scripts.map((script, index) => {
-      const editItem = editingItems.find(e => e.id === index + 1);
-      let newStatus: ScriptStatus = script.status || 'idea';
+    // Получаем порядок одобренных скриптов
+    const approvedScripts = scripts.filter(s => s.approved);
+
+    const updated = scripts.map((script) => {
+      // Если скрипт не одобрен — всегда 'idea'
+      if (!script.approved) {
+        if (script.status !== 'idea' && script.status !== undefined) {
+          changed = true;
+          return { ...script, status: 'idea' as ScriptStatus };
+        }
+        return script;
+      }
+
+      // Скрипт одобрен — синхронизируем с Монтажом
+      const approvedIndex = approvedScripts.findIndex(a => a.id === script.id);
+      const editItem = editingItems.find(e => e.id === approvedIndex + 1);
+      let newStatus: ScriptStatus = script.status || 'script';
+
+      // Минимальный статус для одобренного — 'script'
+      if (newStatus === 'idea') newStatus = 'script';
 
       if (editItem) {
         if (editItem.deliveredToClient && editItem.editingDone && editItem.coverDone) {
@@ -74,7 +94,7 @@ export function DashboardTab({ clientId }: Props) {
         }
       }
 
-      // Только двигаем вперёд (не назад), чтобы ручное перетаскивание тоже работало
+      // Только двигаем вперёд (не назад)
       const ORDER: ScriptStatus[] = ['idea', 'script', 'shooting', 'editing', 'published'];
       const currentRank = ORDER.indexOf(script.status || 'idea');
       const newRank = ORDER.indexOf(newStatus);
@@ -82,12 +102,6 @@ export function DashboardTab({ clientId }: Props) {
       if (newRank > currentRank) {
         changed = true;
         return { ...script, status: newStatus };
-      }
-      
-      // Если скрипт всё ещё в "idea", но имеет текст — ставим "script"
-      if ((script.status === undefined || script.status === 'idea') && script.body) {
-        changed = true;
-        return { ...script, status: 'script' as ScriptStatus };
       }
 
       return script;
@@ -102,6 +116,18 @@ export function DashboardTab({ clientId }: Props) {
     setScripts(scripts.filter(s => s.id !== id));
   };
 
+  // Статус → человекопонятный бейдж
+  const statusInfo = (status: ScriptStatus) => {
+    const map: Record<ScriptStatus, { color: string; bg: string }> = {
+      idea: { color: '#6b7280', bg: 'rgba(107,114,128,0.1)' },
+      script: { color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+      shooting: { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+      editing: { color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
+      published: { color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
+    };
+    return map[status] || map.idea;
+  };
+
   return (
     <div className="scenarios-tab content-factory">
       <div className="card mb-4 animate-fade-in" style={{ marginBottom: '1.5rem' }}>
@@ -109,7 +135,9 @@ export function DashboardTab({ clientId }: Props) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <h3 className="ai-section-title" style={{ margin: 0 }}>🗄️ Библиотека контента и Kanban</h3>
-              <p className="ai-section-desc" style={{ margin: 0, opacity: 0.8 }}>Статусы обновляются автоматически из вкладки «Монтаж». Можно также перетаскивать вручную.</p>
+              <p className="ai-section-desc" style={{ margin: 0, opacity: 0.8 }}>
+                Сценарии двигаются по этапам: Идея → Одобренный → Съемка → Монтаж → Готово. Статусы обновляются автоматически.
+              </p>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button 
@@ -136,13 +164,14 @@ export function DashboardTab({ clientId }: Props) {
           <div className="kanban-container" style={{ marginTop: '1.5rem' }}>
             <div className="kanban-board">
               {[
-                { id: 'idea', title: '💡 Идеи' },
-                { id: 'script', title: '✍️ Сценарий' },
-                { id: 'shooting', title: '🎥 В съемке' },
-                { id: 'editing', title: '✂️ Монтаж' },
-                { id: 'published', title: '✅ Готово' },
+                { id: 'idea', title: '💡 Идеи', desc: 'Ещё не одобрены' },
+                { id: 'script', title: '✅ Одобрены', desc: 'Готовы к съемке' },
+                { id: 'shooting', title: '🎥 В съемке', desc: 'Исходник получен' },
+                { id: 'editing', title: '✂️ Монтаж', desc: 'В работе' },
+                { id: 'published', title: '🎉 Готово', desc: 'Выдано' },
               ].map(col => {
                 const colScripts = scripts.filter(s => (s.status || 'idea') === col.id);
+                const si = statusInfo(col.id as ScriptStatus);
                 return (
                   <div 
                     key={col.id}
@@ -154,13 +183,20 @@ export function DashboardTab({ clientId }: Props) {
                       e.currentTarget.classList.remove('drag-over');
                       const scriptId = e.dataTransfer.getData('text/plain');
                       if (scriptId) {
-                        setScripts(prev => prev.map(s => String(s.id) === scriptId ? { ...s, status: col.id as ScriptStatus } : s));
+                        setScripts(prev => prev.map(s => {
+                          if (String(s.id) === scriptId) {
+                            // Если перетаскиваем из idea в script — автоматически одобряем
+                            const isApproving = col.id === 'script' || col.id === 'shooting' || col.id === 'editing' || col.id === 'published';
+                            return { ...s, status: col.id as ScriptStatus, approved: isApproving ? true : s.approved };
+                          }
+                          return s;
+                        }));
                       }
                     }}
                   >
                     <div className="kanban-column-header">
                       <span>{col.title}</span>
-                      <span className="kanban-badge">{colScripts.length}</span>
+                      <span className="kanban-badge" style={{ background: si.bg, color: si.color }}>{colScripts.length}</span>
                     </div>
                     {colScripts.map(script => (
                       <div 
@@ -170,8 +206,14 @@ export function DashboardTab({ clientId }: Props) {
                         onDragStart={(e) => {
                           e.dataTransfer.setData('text/plain', String(script.id));
                         }}
+                        style={{ borderLeft: `3px solid ${si.color}` }}
                       >
                         <div className="kanban-card-title">{script.topicTitle}</div>
+                        {script.approved && (
+                          <span style={{ fontSize: '10px', color: si.color, fontWeight: 600 }}>
+                            {script.approved ? '✅ Одобрен' : ''}
+                          </span>
+                        )}
                         <details className="kanban-card-details">
                           <summary style={{ fontSize: '12px', color: 'var(--color-primary)', cursor: 'pointer', marginBottom: '8px' }}>
                             Посмотреть текст

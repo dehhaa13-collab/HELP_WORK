@@ -35,10 +35,10 @@ export function computeClientStage(clientId: string): PipelineStage {
   const hasTopics = topics.length > 0;
   if (!hasTopics) return 'formats';
 
-  // 4. Сценарии — есть сгенерированные скрипты
-  const scripts = get<{ id: number; status?: string }[]>(`hw_scenarios_scripts_${clientId}`, []);
-  const hasScripts = scripts.length > 0;
-  if (!hasScripts) return 'topics';
+  // 4. Сценарии — есть ОДОБРЕННЫЕ скрипты (approved === true)
+  const scripts = get<{ id: number; status?: string; approved?: boolean }[]>(`hw_scenarios_scripts_${clientId}`, []);
+  const hasApprovedScripts = scripts.some(s => s.approved);
+  if (!hasApprovedScripts) return 'topics';
 
   // 5. Исходники — хотя бы 1 публикация получила исходник
   const editingItems = get<{ id: number; sourceReceived: boolean; editingDone: boolean; coverDone: boolean; deliveredToClient: boolean }[]>(`hw_editing_${clientId}`, []);

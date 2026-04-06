@@ -47,6 +47,7 @@ interface ScriptItem {
   id: number;
   topicTitle: string;
   status?: ScriptStatus; // Управление через Kanban
+  approved?: boolean; // Одобрен пользователем
   content?: string; // Legacy support
   hook?: string;
   visuals?: string;
@@ -54,6 +55,14 @@ interface ScriptItem {
   cta?: string;
   music?: string;
   duration?: string;
+}
+
+interface TargetItem {
+  id: number;
+  name: string;
+  isPromoted?: boolean;
+  results?: string;
+  campaignFinished?: boolean;
 }
 
 export function ScenariosTab({ clientId }: Props) {
@@ -64,6 +73,9 @@ export function ScenariosTab({ clientId }: Props) {
   const [competitors, setCompetitors] = usePersistedState(`hw_competitors_ai_${clientId}`, '');
   const [topics, setTopics] = usePersistedState<TopicItem[]>(`hw_scenarios_topics_${clientId}`, []);
   const [scripts, setScripts] = usePersistedState<ScriptItem[]>(`hw_scenarios_scripts_${clientId}`, []);
+  
+  // Монтаж и Таргет (для синхронизации названий)
+  const [, setTargetItems] = usePersistedState<TargetItem[]>(`hw_targeting_${clientId}`, []);
   
   // AI Options
   const [aiTone, setAiTone] = usePersistedState(`hw_ai_tone_${clientId}`, 'expert');
@@ -82,18 +94,16 @@ export function ScenariosTab({ clientId }: Props) {
     }
     setIsGeneratingCompetitors(true);
     try {
-      const isCustomSearch = competitors.trim().length > 0;
-      const prompt = isCustomSearch 
-        ? `Проанализируй конкретных Insta-конкурентов: "${competitors}".
-СХОДИ В ИНТЕРНЕТ (Google Search) и найди их страницы, статьи о них или их последние вирусные форматы.
-Выдели их лучшие хуки, форматы видео и стиль. Напиши выжимку их сильных сторон.`
-        : `Ниша: "${clientNiche}".
-СХОДИ В ИНТЕРНЕТ (Google Search) и найди актуальные тренды Reels в этой нише на текущий месяц.
-Опиши 2-3 топовых конкурентов. Какие именно форматы и тексты (хуки) они сейчас используют?`;
+      const prompt = clientNiche.trim()
+        ? `Ниша: "${clientNiche}". ${competitors.trim() ? 'Никнеймы: ' + competitors : ''}\n\nПроанализируй успешных конкурентов и тренды в этой нише Instagram. Опиши: какие топики заходят, какой формат Reels популярен, какие хуки цепляют.`
+        : `Вот конкуренты: "${competitors}".\n\nПроанализируй их контент и выдели: какие темы заходят, какие форматы популярны, какие хуки используют.`;
 
       const responseText = await fetchGeminiCompletion(
-        [{ role: 'user', content: prompt }], 
-        0.3, 
+        [
+          { role: 'system', content: 'Ты аналитик Instagram-контента. Делаешь детальный разбор конкурентов в указанной нише.' },
+          { role: 'user', content: prompt }
+        ],
+        0.5,
         'gemini-2.5-flash',
         'text/plain',
         undefined,
@@ -118,10 +128,15 @@ export function ScenariosTab({ clientId }: Props) {
     }
     setIsGeneratingTopics(true);
     try {
+      // Считаем сколько нужно догенерировать (цель: 10 тем)
+      const selectedCount = topics.filter(t => t.selected).length;
+      const needed = Math.max(10 - selectedCount, 5); // Минимум 5 новых
+
       const prompt = `Ниша клиента: "${clientNiche}".
 ${competitors ? 'Анализ трендов и конкурентов:\n' + competitors : ''}
+${selectedCount > 0 ? `\nУже выбранные темы (НЕ ПОВТОРЯЙ ИХ):\n${topics.filter(t => t.selected).map(t => `- ${t.title}`).join('\n')}` : ''}
 
-Предложи 15 вирусных, кликабельных тем для Reels для этого профиля.
+Предложи ${needed} вирусных, кликабельных тем для Reels для этого профиля.
 ВЕРНИ ТОЛЬКО ВАЛИДНЫЙ JSON-МАССИВ С ОБЪЕКТАМИ:
 [
   { "id": 1, "title": "Название темы 1" },
@@ -145,14 +160,16 @@ ${competitors ? 'Анализ трендов и конкурентов:\n' + com
         0.7
       );
 
-      const formatted = generatedTopics.slice(0, 15).map((t, i) => ({
+      const formatted = generatedTopics.slice(0, needed).map((t, i) => ({
         id: Date.now() + i,
         title: t.title,
         selected: false
       }));
 
-      setTopics(formatted);
-      addToast('success', 'Темы готовы', `ИИ сгенерировал ${formatted.length} тем.`);
+      // Оставляем уже выбранные, заменяем невыбранные
+      const keepSelected = topics.filter(t => t.selected);
+      setTopics([...keepSelected, ...formatted]);
+      addToast('success', 'Темы готовы', `ИИ сгенерировал ${formatted.length} новых тем. Всего ${keepSelected.length + formatted.length}.`);
     } catch (error) {
       console.error(error);
       if (error instanceof z.ZodError) {
@@ -161,6 +178,56 @@ ${competitors ? 'Анализ трендов и конкурентов:\n' + com
          const errMsg = error instanceof Error ? error.message : 'ИИ вернул неверный формат.';
          addToast('error', 'Ошибка генерации', errMsg);
       }
+    } finally {
+      setIsGeneratingTopics(false);
+    }
+  };
+
+  // Перегенерировать только невыбранные темы
+  const handleRegenerateUnselected = async () => {
+    if (!clientNiche.trim()) {
+      addToast('warning', 'Пустая ниша', 'Кратко опишите клиента перед генерацией.');
+      return;
+    }
+    const unselectedCount = topics.filter(t => !t.selected).length;
+    if (unselectedCount === 0) {
+      addToast('info', 'Все темы выбраны', 'Нет невыбранных тем для перегенерации.');
+      return;
+    }
+
+    setIsGeneratingTopics(true);
+    try {
+      const selectedTopics = topics.filter(t => t.selected);
+      const prompt = `Ниша клиента: "${clientNiche}".
+${competitors ? 'Анализ трендов и конкурентов:\n' + competitors : ''}
+
+Уже выбранные темы (НЕ ПОВТОРЯЙ ИХ):
+${selectedTopics.map(t => `- ${t.title}`).join('\n')}
+
+Предложи ${unselectedCount} новых вирусных тем для Reels.
+ВЕРНИ ТОЛЬКО ВАЛИДНЫЙ JSON-МАССИВ:
+[{ "id": 1, "title": "Название" }]`;
+
+      const generatedTopics = await fetchGeminiWithSchema(
+        [
+          { role: 'system', content: 'Ты элитный Instagram-маркетолог. Выдаешь строго JSON-массив уникальных тем.' },
+          { role: 'user', content: prompt }
+        ],
+        TopicsArraySchema,
+        0.8
+      );
+
+      const formatted = generatedTopics.slice(0, unselectedCount).map((t, i) => ({
+        id: Date.now() + i,
+        title: t.title,
+        selected: false
+      }));
+
+      setTopics([...selectedTopics, ...formatted]);
+      addToast('success', 'Перегенерация', `Заменены ${formatted.length} невыбранных тем.`);
+    } catch (error) {
+      console.error(error);
+      addToast('error', 'Ошибка генерации', 'Не удалось перегенерировать темы.');
     } finally {
       setIsGeneratingTopics(false);
     }
@@ -266,10 +333,13 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
       // Обрезаем до нужного количества (ИИ иногда игнорирует ограничение)
       const trimmed = generated.slice(0, topicsToProcess.length);
 
+      // КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: статус = 'idea', approved = false
+      // Сценарий станет 'script' ТОЛЬКО когда пользователь одобрит его
       const newScripts = trimmed.map((s, i) => ({
         id: Date.now() + i,
         topicTitle: s.topicTitle || topicsToProcess[i]?.title || `Тема`,
         status: 'idea' as ScriptStatus,
+        approved: false,
         hook: s.hook,
         visuals: s.visuals,
         body: s.body,
@@ -285,11 +355,14 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
           return [newScripts[0], ...filtered];
         });
       } else {
-        // Добавляем сверху новые
-        setScripts(prev => [...newScripts, ...prev]);
+        // Заменяем все неодобренные + добавляем новые
+        setScripts(prev => {
+          const keepApproved = prev.filter(s => s.approved);
+          return [...keepApproved, ...newScripts];
+        });
       }
       
-      addToast('success', 'Сценарии готовы', 'ИИ написал структурированные тексты.');
+      addToast('success', 'Сценарии готовы', 'ИИ написал тексты. Одобрите подходящие галочкой ✅');
     } catch (error) {
       console.error(error);
       if (error instanceof z.ZodError) {
@@ -298,6 +371,115 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
          const errMsg = error instanceof Error ? error.message : 'Сбой при генерации сценариев.';
          addToast('error', 'Ошибка генерации', errMsg);
       }
+    } finally {
+      setIsGeneratingScripts(false);
+    }
+  };
+
+  // --- 4. Одобрение сценариев ---
+  const approveScript = (id: number) => {
+    setScripts(prev => prev.map(s => {
+      if (s.id === id) {
+        const newApproved = !s.approved;
+        return { 
+          ...s, 
+          approved: newApproved,
+          status: newApproved ? 'script' as ScriptStatus : 'idea' as ScriptStatus
+        };
+      }
+      return s;
+    }));
+  };
+
+  // Синхронизировать одобренные сценарии → Монтаж (заполнить названия)
+  const syncApprovedToEditing = () => {
+    const approved = scripts.filter(s => s.approved);
+    if (approved.length === 0) {
+      addToast('warning', 'Нет одобренных', 'Сначала одобрите сценарии галочкой.');
+      return;
+    }
+
+    // Записываем названия в targetItems (они же имена публикаций в Монтаже)
+    const newTargetItems: TargetItem[] = approved.map((s, i) => ({
+      id: i + 1,
+      name: s.topicTitle,
+      isPromoted: false,
+      results: '',
+      campaignFinished: false,
+    }));
+
+    setTargetItems(newTargetItems);
+    addToast('success', 'Синхронизировано', `${approved.length} сценариев перенесены в «Монтаж».`);
+  };
+
+  // Перегенерировать неодобренные сценарии
+  const handleRegenerateUnapproved = async () => {
+    const unapproved = scripts.filter(s => !s.approved);
+    if (unapproved.length === 0) {
+      addToast('info', 'Все одобрены', 'Нет неодобренных сценариев.');
+      return;
+    }
+
+    // Собираем темы для перегенерации
+    const topicsForRegen = unapproved.map(s => ({
+      id: Date.now() + Math.random(),
+      title: s.topicTitle,
+      selected: true
+    }));
+
+    // Временно подставляем и генерируем
+    setIsGeneratingScripts(true);
+    try {
+      const selectedTitles = topicsForRegen.map(t => t.title).join(';\n');
+      
+      const toneMap: Record<string, string> = {
+        'expert': 'Строго профессионально, экспертно, с фактами.',
+        'simple': 'Простая разговорная форма, дружелюбно, как с другом.',
+        'humorous': 'С юмором, шутками, возможно сарказмом.',
+        'provocative': 'Дерзко, вызывающе, через ломку стереотипов.'
+      };
+      const formatMap: Record<string, string> = {
+        'talking_head': 'Говорящая голова.',
+        'voiceover': 'Закадровый голос + Эстетика.',
+        'pov': 'POV.',
+        'interview': 'Подкаст / Интервью.'
+      };
+
+      const prompt = `Ниша: ${clientNiche}
+Перепиши ДРУГИЕ, ЛУЧШИЕ сценарии для этих тем (${topicsForRegen.length} шт):
+${selectedTitles}
+Тон: ${toneMap[aiTone] || 'Естественный'}. Формат: ${formatMap[aiFormat] || 'Любой'}.
+ВЕРНИ JSON-МАССИВ: [{ "topicTitle": "...", "hook": "...", "visuals": "...", "body": "...", "cta": "...", "music": "...", "duration": "..." }]`;
+
+      const generated = await fetchGeminiWithSchema(
+        [{ role: 'system', content: 'Ты сценарист Reels. Пиши живо, без академизма. JSON-массив.' },
+         { role: 'user', content: prompt }],
+        ScriptsArraySchema,
+        0.9 // Повышенная температура для разнообразия
+      );
+
+      const newScripts = generated.slice(0, topicsForRegen.length).map((s, i) => ({
+        id: Date.now() + i,
+        topicTitle: s.topicTitle || topicsForRegen[i]?.title || 'Тема',
+        status: 'idea' as ScriptStatus,
+        approved: false,
+        hook: s.hook,
+        visuals: s.visuals,
+        body: s.body,
+        cta: s.cta,
+        music: s.music,
+        duration: s.duration
+      }));
+
+      setScripts(prev => {
+        const keepApproved = prev.filter(s => s.approved);
+        return [...keepApproved, ...newScripts];
+      });
+
+      addToast('success', 'Перегенерация', `${newScripts.length} сценариев переписаны заново.`);
+    } catch (error) {
+      console.error(error);
+      addToast('error', 'Ошибка', 'Не удалось перегенерировать.');
     } finally {
       setIsGeneratingScripts(false);
     }
@@ -327,6 +509,11 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
     { value: 'interview', label: '🎙 Подкаст' },
   ];
 
+  const selectedTopicsCount = topics.filter(t => t.selected).length;
+  const unselectedTopicsCount = topics.filter(t => !t.selected).length;
+  const approvedScriptsCount = scripts.filter(s => s.approved).length;
+  const unapprovedScriptsCount = scripts.filter(s => !s.approved).length;
+
   return (
     <div className="scenarios-tab content-factory">
       {/* === Section Tabs === */}
@@ -342,10 +529,10 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
           </button>
         ))}
       </div>
+
       {/* === SECTION: Бриф === */}
       {activeSection === 'brief' && (
         <>
-      {/* 1. БРИФ КЛИЕНТА */}
       <div className="card">
         <div className="card-body">
           <h3 className="ai-section-title">1. Кто наш клиент? (Бриф)</h3>
@@ -360,7 +547,6 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
         </div>
       </div>
 
-      {/* 2. КОНКУРЕНТЫ */}
       <div className="card">
         <div className="card-body">
           <h3 className="ai-section-title">2. Идеи от конкурентов (Опционально)</h3>
@@ -392,14 +578,28 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
       {activeSection === 'topics' && (
       <div className="card">
         <div className="card-body">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div>
               <h3 className="ai-section-title" style={{ marginBottom: '0.2rem' }}>3. Темы постов и Reels</h3>
-              <p className="ai-section-desc" style={{ margin: 0 }}>Отметьте нужные галочкой или напишите свои.</p>
+              <p className="ai-section-desc" style={{ margin: 0 }}>
+                Отметьте галочкой темы, которые нравятся. Цель: набрать 10.
+                {topics.length > 0 && <> Выбрано: <b>{selectedTopicsCount}</b> из {topics.length}</>}
+              </p>
             </div>
-            <button className="btn btn-primary" onClick={handleGenerateTopics} disabled={isGeneratingTopics}>
-              {isGeneratingTopics ? 'Ожидайте...' : '✨ Сгенерировать ИИ'}
-            </button>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {unselectedTopicsCount > 0 && selectedTopicsCount > 0 && (
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={handleRegenerateUnselected} 
+                  disabled={isGeneratingTopics}
+                >
+                  {isGeneratingTopics ? '⏳...' : `🔄 Заменить ${unselectedTopicsCount} невыбранных`}
+                </button>
+              )}
+              <button className="btn btn-primary" onClick={handleGenerateTopics} disabled={isGeneratingTopics}>
+                {isGeneratingTopics ? 'Ожидайте...' : topics.length === 0 ? '✨ Сгенерировать ИИ' : '✨ Сгенерировать ещё'}
+              </button>
+            </div>
           </div>
 
           <div className="topics-list">
@@ -414,7 +614,7 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
                 topics.map((topic, i) => (
                   <div 
                     key={topic.id} 
-                    className="cf-topic-row animate-fade-in"
+                    className={`cf-topic-row animate-fade-in ${topic.selected ? 'cf-topic-selected' : ''}`}
                     style={{ animationDelay: `${i * 0.05}s` }}
                   >
                     <input 
@@ -445,9 +645,9 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
             className="btn btn-primary btn-lg mt-3" 
             style={{ width: '100%' }} 
             onClick={() => setActiveSection('generate')}
-            disabled={topics.filter(t => t.selected).length === 0}
+            disabled={selectedTopicsCount === 0}
           >
-            Далее → Генерация ✨ ({topics.filter(t => t.selected).length} тем выбрано)
+            Далее → Генерация ✨ ({selectedTopicsCount} тем выбрано)
           </button>
         </div>
       </div>
@@ -456,7 +656,6 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
       {/* === SECTION: Генерация === */}
       {activeSection === 'generate' && (
         <>
-      {/* 4. СЦЕНАРИИ И НАСТРОЙКИ */}
       <div className="card">
         <div className="card-body">
           <h3 className="ai-section-title">✨ Фабрика сценариев</h3>
@@ -501,46 +700,86 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
           >
             {isGeneratingScripts 
               ? '✨ AI пишет сценарии...' 
-              : `✍️ Сгенерировать сценарии для ${topics.filter(t => t.selected).length} тем`}
+              : `✍️ Сгенерировать сценарии для ${selectedTopicsCount} тем`}
           </button>
         </div>
       </div>
 
-      {/* 5. ИТОГОВЫЕ СЦЕНАРИИ */}
-      
-        {isGeneratingScripts && (
-          <div className="animate-fade-in">
-             {[...Array(topics.filter(t => t.selected).length || 1)].map((_, i) => (
-               <div key={`skel-s-${i}`} className="magic-skeleton magic-skeleton-script"></div>
-             ))}
-          </div>
-        )}
-      
+      {/* Скелетоны загрузки */}
+      {isGeneratingScripts && (
+        <div className="animate-fade-in">
+           {[...Array(selectedTopicsCount || 1)].map((_, i) => (
+             <div key={`skel-s-${i}`} className="magic-skeleton magic-skeleton-script"></div>
+           ))}
+        </div>
+      )}
 
+      {/* === Сценарии: одобрение === */}
       {!isGeneratingScripts && scripts.length > 0 && (
         <div className="card mt-4 animate-fade-in">
           <div className="card-body">
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                <div>
-                 <h3 className="ai-section-title" style={{ margin: 0 }}>✅ Сценарии готовы!</h3>
-                 <p className="ai-section-desc" style={{ margin: 0 }}>Они также сохранены в вашу Канбан-доску во вкладке "Дашборд".</p>
+                 <h3 className="ai-section-title" style={{ margin: 0 }}>📋 Одобрение сценариев</h3>
+                 <p className="ai-section-desc" style={{ margin: 0 }}>
+                   Одобрено: <b>{approvedScriptsCount}</b> из {scripts.length}. 
+                   Отметьте ✅ те, что нравятся — они перенесутся в «Монтаж».
+                 </p>
                </div>
-               <button 
-                 className="btn btn-primary"
-                 onClick={() => {
-                   exportScriptsToWord(scripts);
-                   addToast('success', 'Экспорт', 'Файл .docx скачивается...');
-                 }}
-               >
-                 📄 Скачать сценарии (Word)
-               </button>
+               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                 {unapprovedScriptsCount > 0 && approvedScriptsCount > 0 && (
+                   <button 
+                     className="btn btn-secondary btn-sm"
+                     onClick={handleRegenerateUnapproved}
+                     disabled={isGeneratingScripts}
+                   >
+                     🔄 Перегенерировать {unapprovedScriptsCount} неодобренных
+                   </button>
+                 )}
+                 {approvedScriptsCount > 0 && (
+                   <button 
+                     className="btn btn-primary btn-sm"
+                     onClick={syncApprovedToEditing}
+                   >
+                     📤 Перенести {approvedScriptsCount} в «Монтаж»
+                   </button>
+                 )}
+                  <button 
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => {
+                      exportScriptsToWord(scripts);
+                      addToast('success', 'Экспорт', 'Файл .docx скачивается...');
+                    }}
+                  >
+                    📄 Скачать (Word)
+                  </button>
+                </div>
              </div>
 
              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-               {scripts.slice(0, 5).map(script => (
-                 <div key={script.id} style={{ padding: '1rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-bg)' }}>
+               {scripts.map(script => (
+                 <div 
+                   key={script.id} 
+                   style={{ 
+                     padding: '1rem', 
+                     border: `2px solid ${script.approved ? 'var(--color-success, #22c55e)' : 'var(--color-border)'}`, 
+                     borderRadius: 'var(--radius-md)', 
+                     background: script.approved ? 'rgba(34, 197, 94, 0.04)' : 'var(--color-bg)',
+                     transition: 'all 0.2s ease'
+                   }}
+                 >
                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                     <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--color-text)' }}>{script.topicTitle}</h4>
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                       <button
+                         className={`btn btn-sm ${script.approved ? 'btn-primary' : 'btn-ghost'}`}
+                         onClick={() => approveScript(script.id)}
+                         title={script.approved ? 'Одобрено ✅' : 'Одобрить сценарий'}
+                         style={{ minWidth: '36px', padding: '4px 8px', fontSize: '16px' }}
+                       >
+                         {script.approved ? '✅' : '☐'}
+                       </button>
+                       <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--color-text)' }}>{script.topicTitle}</h4>
+                     </div>
                      <button 
                        className="btn btn-ghost btn-sm"
                        onClick={() => {
@@ -549,7 +788,7 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
                          addToast('success', 'Скопировано', 'Текст скопирован в буфер обмена');
                        }}
                      >
-                       📋 Копировать
+                       📋
                      </button>
                    </div>
                    <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -559,11 +798,6 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
                    </div>
                  </div>
                ))}
-               {scripts.length > 5 && (
-                 <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>
-                   И еще {scripts.length - 5} сценариев... Посмотреть всё можно во вкладке "Дашборд".
-                 </p>
-               )}
              </div>
           </div>
         </div>

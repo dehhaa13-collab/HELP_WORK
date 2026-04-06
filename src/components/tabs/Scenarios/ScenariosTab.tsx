@@ -303,8 +303,48 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
     }
   };
 
+  // === Section Navigation ===
+  type Section = 'brief' | 'topics' | 'generate';
+  const [activeSection, setActiveSection] = useState<Section>('brief');
+
+  const SECTIONS: { id: Section; label: string; emoji: string; num: number }[] = [
+    { id: 'brief', label: 'Бриф', emoji: '📋', num: 1 },
+    { id: 'topics', label: 'Темы', emoji: '💡', num: 2 },
+    { id: 'generate', label: 'Генерация', emoji: '✨', num: 3 },
+  ];
+
+  const TONE_OPTIONS = [
+    { value: 'expert', label: '🎓 Экспертно' },
+    { value: 'simple', label: '💬 По-приятельски' },
+    { value: 'humorous', label: '😄 С юмором' },
+    { value: 'provocative', label: '🔥 Дерзко' },
+  ];
+
+  const FORMAT_OPTIONS = [
+    { value: 'talking_head', label: '🗣 Говорящая голова' },
+    { value: 'voiceover', label: '🎬 Закадровый голос' },
+    { value: 'pov', label: '👁 POV' },
+    { value: 'interview', label: '🎙 Подкаст' },
+  ];
+
   return (
     <div className="scenarios-tab content-factory">
+      {/* === Section Tabs === */}
+      <div className="scenarios-stages">
+        {SECTIONS.map((s) => (
+          <button
+            key={s.id}
+            className={`scenarios-stage-item ${activeSection === s.id ? 'scenarios-stage-active' : ''}`}
+            onClick={() => setActiveSection(s.id)}
+          >
+            <span className="scenarios-stage-num">{s.num}</span>
+            <span>{s.emoji} {s.label}</span>
+          </button>
+        ))}
+      </div>
+      {/* === SECTION: Бриф === */}
+      {activeSection === 'brief' && (
+        <>
       {/* 1. БРИФ КЛИЕНТА */}
       <div className="card">
         <div className="card-body">
@@ -342,7 +382,14 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
         </div>
       </div>
 
-      {/* 3. ТЕМЫ РИЛС */}
+      <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={() => setActiveSection('topics')}>
+        Далее → Темы 💡
+      </button>
+        </>
+      )}
+
+      {/* === SECTION: Темы === */}
+      {activeSection === 'topics' && (
       <div className="card">
         <div className="card-body">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -393,33 +440,56 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
               </button>
             )}
           </div>
+
+          <button 
+            className="btn btn-primary btn-lg mt-3" 
+            style={{ width: '100%' }} 
+            onClick={() => setActiveSection('generate')}
+            disabled={topics.filter(t => t.selected).length === 0}
+          >
+            Далее → Генерация ✨ ({topics.filter(t => t.selected).length} тем выбрано)
+          </button>
         </div>
       </div>
+      )}
 
+      {/* === SECTION: Генерация === */}
+      {activeSection === 'generate' && (
+        <>
       {/* 4. СЦЕНАРИИ И НАСТРОЙКИ */}
       <div className="card">
         <div className="card-body">
-          <h3 className="ai-section-title">4. Фабрика сценариев</h3>
+          <h3 className="ai-section-title">✨ Фабрика сценариев</h3>
           <p className="ai-section-desc">Настройте подачу и сгенерируйте детальные сценарии для выбранных тем.</p>
           
           <div className="cf-settings-grid">
-            <div className="cf-setting-group">
-              <label className="input-label">📝 Тон (Tone of voice)</label>
-              <select className="input select" value={aiTone} onChange={(e) => setAiTone(e.target.value)}>
-                <option value="expert">Строго / Профессионально</option>
-                <option value="simple">Разговорно / По-приятельски</option>
-                <option value="humorous">С юмором / Иронично</option>
-                <option value="provocative">Дерзко / Провокационно</option>
-              </select>
+            <div className="toggle-group">
+              <span className="toggle-group-label">📝 Тон (Tone of voice)</span>
+              <div className="toggle-group-options">
+                {TONE_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    className={`toggle-option ${aiTone === opt.value ? 'toggle-option-active' : ''}`}
+                    onClick={() => setAiTone(opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="cf-setting-group">
-              <label className="input-label">🎥 Формат видео</label>
-              <select className="input select" value={aiFormat} onChange={(e) => setAiFormat(e.target.value)}>
-                <option value="talking_head">Говорящая голова</option>
-                <option value="voiceover">Закадровый голос + Эстетика</option>
-                <option value="pov">POV (от первого лица)</option>
-                <option value="interview">Подкаст / Интервью</option>
-              </select>
+            <div className="toggle-group">
+              <span className="toggle-group-label">🎥 Формат видео</span>
+              <div className="toggle-group-options">
+                {FORMAT_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    className={`toggle-option ${aiFormat === opt.value ? 'toggle-option-active' : ''}`}
+                    onClick={() => setAiFormat(opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -497,6 +567,8 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
              </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

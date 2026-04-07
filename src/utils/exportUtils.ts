@@ -4,7 +4,7 @@
    - CSV для контент-плана
    ============================================ */
 
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, ShadingType, Table, TableRow, TableCell, WidthType, PageBreak } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageBreak } from 'docx';
 import { saveAs } from 'file-saver';
 
 interface ScriptItem {
@@ -37,32 +37,43 @@ const FORMAT_LABELS: Record<string, string> = {
 export async function exportScriptsToWord(scripts: ScriptItem[]) {
   if (scripts.length === 0) return;
 
-  const children: (Paragraph | Table)[] = [];
+  const children: Paragraph[] = [];
 
   // ==========================
   // COVER PAGE
   // ==========================
   children.push(
     new Paragraph({
-      spacing: { before: 2000, after: 400 },
+      spacing: { before: 3000, after: 400 },
       alignment: AlignmentType.CENTER,
       children: [
         new TextRun({
-          text: 'КОНТЕНТ-СТРАТЕГІЯ ТА СЦЕНАРІЇ',
-          size: 64,
+          text: 'СЦЕНАРИИ',
+          size: 56,
           bold: true,
           color: '1a1a2e',
         }),
       ],
     }),
     new Paragraph({
-      spacing: { after: 3000 },
+      spacing: { after: 200 },
       alignment: AlignmentType.CENTER,
       children: [
         new TextRun({
-          text: 'Сгенеровано за допомогою Content Factory',
+          text: 'Content Factory',
           size: 28,
-          color: '6366F1', // Primary color
+          color: '6366F1',
+        }),
+      ],
+    }),
+    new Paragraph({
+      spacing: { after: 200 },
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({
+          text: `Всего сценариев: ${scripts.length}`,
+          size: 24,
+          color: '888888',
         }),
       ],
     }),
@@ -70,7 +81,7 @@ export async function exportScriptsToWord(scripts: ScriptItem[]) {
       alignment: AlignmentType.CENTER,
       children: [
         new TextRun({
-          text: new Date().toLocaleDateString('uk-UA'),
+          text: new Date().toLocaleDateString('ru-RU'),
           size: 24,
           color: '888888',
         }),
@@ -80,64 +91,96 @@ export async function exportScriptsToWord(scripts: ScriptItem[]) {
   );
 
   // ==========================
-  // SCRIPTS
+  // SCRIPTS — простые абзацы (без таблиц!)
   // ==========================
   scripts.forEach((script, index) => {
-    // ЗАГОЛОВОК СЦЕНАРИЯ
+    // Разделитель между сценариями
+    if (index > 0) {
+      children.push(
+        new Paragraph({ spacing: { before: 400, after: 200 }, children: [
+          new TextRun({ text: '─'.repeat(50), color: 'CCCCCC', size: 20 }),
+        ]}),
+      );
+    }
+
+    // ЗАГОЛОВОК
     children.push(
       new Paragraph({
         heading: HeadingLevel.HEADING_1,
-        spacing: { before: 400, after: 200 },
+        spacing: { before: 300, after: 200 },
         children: [
-          new TextRun({ text: `Сценарій ${index + 1}: `, color: '6366F1', size: 32, bold: true }),
-          new TextRun({ text: script.topicTitle, color: '1a1a2e', size: 32, bold: true }),
+          new TextRun({ text: `Сценарий ${index + 1}: `, color: '6366F1', size: 28, bold: true }),
+          new TextRun({ text: script.topicTitle, color: '1a1a2e', size: 28, bold: true }),
         ],
       })
     );
 
-    // ТАБЛИЦА С КОНТЕНТОМ
-    const tableRows = [];
-
     // ХУК
     if (script.hook) {
-      tableRows.push(createTableRow('ХУК (2-3 сек)', script.hook, 'F0F0FF'));
+      children.push(
+        new Paragraph({
+          spacing: { before: 200, after: 80 },
+          children: [
+            new TextRun({ text: '🎯 ХУК: ', bold: true, size: 22, color: '6366F1' }),
+            new TextRun({ text: script.hook, size: 22, color: '333333' }),
+          ],
+        })
+      );
     }
+
     // ВИЗУАЛ
     if (script.visuals) {
-      tableRows.push(createTableRow('В КАДРІ', script.visuals, 'FFFFFF'));
+      children.push(
+        new Paragraph({
+          spacing: { before: 100, after: 80 },
+          children: [
+            new TextRun({ text: '🎬 В КАДРЕ: ', bold: true, size: 22, color: '6366F1' }),
+            new TextRun({ text: script.visuals, size: 22, color: '333333' }),
+          ],
+        })
+      );
     }
+
     // ТЕКСТ / СЦЕНАРИЙ
     if (script.body) {
-      tableRows.push(createTableRow('ТЕКСТ РОЛИКУ', script.body, 'F8F9FA'));
+      children.push(
+        new Paragraph({
+          spacing: { before: 100, after: 80 },
+          children: [
+            new TextRun({ text: '📝 ТЕКСТ: ', bold: true, size: 22, color: '6366F1' }),
+          ],
+        }),
+        new Paragraph({
+          spacing: { before: 0, after: 80 },
+          children: [
+            new TextRun({ text: script.body, size: 22, color: '333333' }),
+          ],
+        })
+      );
     }
+
     // CTA
     if (script.cta) {
-      tableRows.push(createTableRow('CTA (ДІЯ)', script.cta, 'FFFFFF'));
+      children.push(
+        new Paragraph({
+          spacing: { before: 100, after: 80 },
+          children: [
+            new TextRun({ text: '📣 CTA: ', bold: true, size: 22, color: '6366F1' }),
+            new TextRun({ text: script.cta, size: 22, color: '333333' }),
+          ],
+        })
+      );
     }
 
-    const scriptTable = new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
-        bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
-        left: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
-        right: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
-        insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
-      },
-      rows: tableRows,
-    });
-
-    children.push(scriptTable);
-
     // МЕТАДАННЫЕ
-    const metaParts = [];
-    if (script.music) metaParts.push(`🎵 Музика: ${script.music}`);
+    const metaParts: string[] = [];
+    if (script.music) metaParts.push(`🎵 Музыка: ${script.music}`);
     if (script.duration) metaParts.push(`⏱ Хронометраж: ${script.duration}`);
     
     if (metaParts.length > 0) {
       children.push(
         new Paragraph({
-          spacing: { before: 200, after: 400 },
+          spacing: { before: 100, after: 200 },
           children: [
             new TextRun({
               text: metaParts.join('   |   '),
@@ -168,7 +211,6 @@ export async function exportScriptsToWord(scripts: ScriptItem[]) {
   });
 
   const rawBlob = await Packer.toBlob(doc);
-  // Re-wrap with explicit MIME type for Safari compatibility
   const arrayBuf = await rawBlob.arrayBuffer();
   const blob = new Blob([arrayBuf], {
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -183,38 +225,6 @@ export async function exportScriptsToWord(scripts: ScriptItem[]) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }, 100);
-}
-
-// Helper для создания строк таблицы с отступами и шрифтами
-function createTableRow(label: string, content: string, bgColor: string): TableRow {
-  return new TableRow({
-    children: [
-      new TableCell({
-        width: { size: 25, type: WidthType.PERCENTAGE },
-        shading: { type: ShadingType.SOLID, color: bgColor },
-        margins: { top: 200, bottom: 200, left: 200, right: 200 },
-        children: [
-          new Paragraph({
-            children: [
-              new TextRun({ text: label, bold: true, color: '1a1a2e', size: 20 })
-            ]
-          })
-        ]
-      }),
-      new TableCell({
-        width: { size: 75, type: WidthType.PERCENTAGE },
-        margins: { top: 200, bottom: 200, left: 200, right: 200 },
-        children: [
-          new Paragraph({
-            alignment: AlignmentType.JUSTIFIED,
-            children: [
-              new TextRun({ text: content, size: 22 })
-            ]
-          })
-        ]
-      })
-    ]
-  });
 }
 
 // =======================================

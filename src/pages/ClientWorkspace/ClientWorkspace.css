@@ -92,6 +92,17 @@
   border-radius: var(--radius-full);
 }
 
+.sidebar-recommendation {
+  display: inline-block;
+  font-size: 11px;
+  padding: 3px 10px;
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #FCD34D;
+  border-radius: var(--radius-full);
+  margin-top: 4px;
+  cursor: default;
+}
+
 /* Nav */
 .sidebar-nav {
   flex: 1;

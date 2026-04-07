@@ -83,9 +83,15 @@ export function ClientWorkspace() {
     return null;
   }
 
+  // Manual stage (primary display)
+  const manualStageKey = client.pipelineStage || 'meeting';
+  const stageInfo = PIPELINE_STAGES.find((s) => s.key === manualStageKey);
+  const stageIndex = PIPELINE_STAGES.findIndex((s) => s.key === manualStageKey);
+
+  // Computed stage (recommendation)
   const computedStage = computeClientStage(client.id, client.workspaceData);
-  const stageInfo = PIPELINE_STAGES.find((s) => s.key === computedStage);
-  const stageIndex = PIPELINE_STAGES.findIndex((s) => s.key === computedStage);
+  const hasRecommendation = computedStage !== manualStageKey;
+  const recStageInfo = hasRecommendation ? PIPELINE_STAGES.find((s) => s.key === computedStage) : null;
 
   const renderTab = () => {
     switch (activeTab) {
@@ -130,6 +136,11 @@ export function ClientWorkspace() {
           <div className="sidebar-stage-badge">
             {stageInfo?.emoji} {stageInfo?.label} ({stageIndex + 1}/{PIPELINE_STAGES.length})
           </div>
+          {hasRecommendation && recStageInfo && (
+            <div className="sidebar-recommendation" title="Рекомендация на основе данных">
+              💡 {recStageInfo.emoji} {recStageInfo.label}
+            </div>
+          )}
         </div>
 
         <nav className="sidebar-nav">

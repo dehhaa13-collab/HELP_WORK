@@ -228,6 +228,42 @@
   margin-bottom: var(--space-2);
 }
 
+.client-stage-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.client-stage-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+  padding: 0;
+}
+
+.client-stage-nav-btn:hover:not(:disabled) {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  transform: scale(1.1);
+}
+
+.client-stage-nav-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
 .client-stage-counter {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
@@ -268,6 +304,29 @@
 .stage-dot-current {
   background-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+/* AI Recommendation badge */
+.client-recommendation {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px dashed rgba(245, 158, 11, 0.3);
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.client-recommendation:hover {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.12);
 }
 
 /* Card Actions */

@@ -6,6 +6,7 @@
    ============================================ */
 
 import { usePersistedState } from '../../../utils/usePersistedState';
+import { logActivity } from '../../../utils/activityLogger';
 import './EditingTab.css';
 
 interface Props {
@@ -65,6 +66,24 @@ export function EditingTab({ clientId }: Props) {
   const toggleField = (id: number, field: keyof Omit<EditItem, 'id'>) => {
     // Сначала убедимся что массив правильной длины
     const base = syncedItems.length !== items.length ? syncedItems : items;
+    const item = base.find(i => i.id === id);
+    const newValue = item ? !item[field] : true;
+
+    // Log key milestones
+    const fieldLabels: Record<string, { on: string; off: string; type: 'editing_source_received' | 'editing_done' | 'editing_delivered' }> = {
+      sourceReceived: { on: 'Исходник получен', off: 'Исходник снят', type: 'editing_source_received' },
+      editingDone:    { on: 'Монтаж завершён', off: 'Монтаж снят', type: 'editing_done' },
+      deliveredToClient: { on: 'Выдано клиенту', off: 'Выдача снята', type: 'editing_delivered' },
+    };
+    const info = fieldLabels[field];
+    if (info) {
+      logActivity({
+        action_type: info.type,
+        client_id: clientId,
+        details: newValue ? info.on : info.off,
+      });
+    }
+
     setItems(
       base.map((item) =>
         item.id === id ? { ...item, [field]: !item[field] } : item

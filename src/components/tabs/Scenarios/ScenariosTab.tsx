@@ -9,6 +9,7 @@ import { useToastStore } from '../../../store';
 import { fetchGeminiCompletion, fetchGeminiWithSchema } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
 import { exportScriptsToWord } from '../../../utils/exportUtils';
+import { logActivity } from '../../../utils/activityLogger';
 import './ScenariosTab.css';
 
 interface Props {
@@ -363,6 +364,7 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
       }
       
       addToast('success', 'Сценарии готовы', 'ИИ написал тексты. Одобрите подходящие галочкой ✅');
+      logActivity({ action_type: 'script_generated', client_id: clientId, details: `Сгенерировано ${trimmed.length} сценариев` });
     } catch (error) {
       console.error(error);
       if (error instanceof z.ZodError) {
@@ -370,6 +372,7 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
       } else {
          const errMsg = error instanceof Error ? error.message : 'Сбой при генерации сценариев.';
          addToast('error', 'Ошибка генерации', errMsg);
+         logActivity({ action_type: 'ai_analysis_error', client_id: clientId, details: `Ошибка сценариев: ${errMsg}` });
       }
     } finally {
       setIsGeneratingScripts(false);
@@ -381,6 +384,11 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
     setScripts(prev => prev.map(s => {
       if (s.id === id) {
         const newApproved = !s.approved;
+        logActivity({
+          action_type: newApproved ? 'script_approved' : 'script_status_changed',
+          client_id: clientId,
+          details: newApproved ? `Одобрен: ${s.topicTitle}` : `Снято одобрение: ${s.topicTitle}`,
+        });
         return { 
           ...s, 
           approved: newApproved,

@@ -13,7 +13,7 @@ const mapDbToClient = (row: Record<string, unknown>): Client => ({
   id: row.id as string,
   name: row.name as string,
   instagram: row.instagram as string,
-  pipelineStage: (row.pipeline_stage as PipelineStage) || 'meeting',
+  pipelineStage: (row.pipeline_stage as PipelineStage) || 'new',
   meetingSummary: (row.meeting_summary as string) || undefined,
   workspaceData: typeof row.workspace_data === 'object' && row.workspace_data ? row.workspace_data as Record<string, any> : {},
   createdAt: row.created_at as string,
@@ -129,7 +129,7 @@ export function useAddClient() {
       const insertData: Record<string, unknown> = {
         name,
         instagram: instagramFormatted,
-        pipeline_stage: 'meeting',
+        pipeline_stage: 'new',
       };
       if (comment && comment.trim()) {
         insertData.meeting_summary = comment.trim();

@@ -84,7 +84,7 @@ export function ClientWorkspace() {
   }
 
   // Manual stage (primary display)
-  const manualStageKey = client.pipelineStage || 'meeting';
+  const manualStageKey = client.pipelineStage || 'new';
   const stageInfo = PIPELINE_STAGES.find((s) => s.key === manualStageKey);
   const stageIndex = PIPELINE_STAGES.findIndex((s) => s.key === manualStageKey);
 
@@ -134,7 +134,7 @@ export function ClientWorkspace() {
           <h2 className="sidebar-client-name">{client.name}</h2>
           <span className="sidebar-client-ig">{client.instagram}</span>
           <div className="sidebar-stage-badge">
-            {stageInfo?.emoji} {stageInfo?.label} ({stageIndex + 1}/{PIPELINE_STAGES.length})
+            {stageInfo?.emoji} {stageInfo?.label} ({stageIndex}/{PIPELINE_STAGES.length - 1})
           </div>
           {hasRecommendation && recStageInfo && (
             <div className="sidebar-recommendation" title="Рекомендация на основе данных">

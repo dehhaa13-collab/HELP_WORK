@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import * as Sentry from '@sentry/react';
+import { logActivity } from '../utils/activityLogger';
 import type { Toast, ToastType, User } from '../types';
 
 const generateId = () => crypto.randomUUID();
@@ -59,6 +60,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Отправляем данные в Sentry, чтобы знать, что ошибка случилась именно у Даши
       Sentry.setUser({ id: found.user.id, username: found.user.name, role: found.user.role });
 
+      // Логируем вход
+      logActivity({ action_type: 'login', details: `${found.user.name} (${found.user.role})` });
+
       if (rememberMe) {
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: found.user, isAuthenticated: true }));
       } else {
@@ -69,6 +73,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     return false;
   },
   logout: () => {
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser) {
+      logActivity({ action_type: 'logout', details: `${currentUser.name} вышел` });
+    }
     localStorage.removeItem(AUTH_STORAGE_KEY);
     Sentry.setUser(null);
     set({ user: null, isAuthenticated: false });

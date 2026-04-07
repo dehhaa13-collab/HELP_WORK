@@ -6,7 +6,9 @@ import { PIPELINE_STAGES } from '../../types';
 import type { Client } from '../../types';
 import { computeClientStage } from '../../utils/computeStage';
 import { trackStageChange, getDaysOnCurrentStage, getIdleLevel, getIdleHint } from '../../utils/stageTracker';
+import { logActivity } from '../../utils/activityLogger';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
+import { ActivityLog } from './ActivityLog';
 import './Dashboard.css';
 
 export function Dashboard() {
@@ -34,7 +36,8 @@ export function Dashboard() {
   const [newInstagram, setNewInstagram] = useState('');
   const [newComment, setNewComment] = useState('');
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
-  const [dashView, setDashView] = useState<'clients' | 'analytics'>('clients');
+  const [dashView, setDashView] = useState<'clients' | 'analytics' | 'activity'>('clients');
+  const isAdmin = user?.role === 'admin';
 
   // Inline editing
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
@@ -67,6 +70,7 @@ export function Dashboard() {
 
     try {
       await addClient({ name: newName.trim(), instagram: newInstagram.trim(), comment: newComment.trim() });
+      logActivity({ action_type: 'client_created', client_name: newName.trim(), details: `Instagram: ${newInstagram.trim()}` });
       addToast('success', 'Клиент добавлен', `${newName.trim()} добавлен в систему.`);
       setNewName('');
       setNewInstagram('');
@@ -87,6 +91,7 @@ export function Dashboard() {
     if (!clientToDelete) return;
     try {
       await removeClient(clientToDelete.id);
+      logActivity({ action_type: 'client_deleted', client_name: clientToDelete.name, client_id: clientToDelete.id, details: `Удалён пользователем` });
       addToast('info', 'Клиент удалён', `${clientToDelete.name} удалён из системы.`);
       setClientToDelete(null);
     } catch (error) {
@@ -111,6 +116,7 @@ export function Dashboard() {
     }
     try {
       await updateClient({ id: clientId, updates: { name: editName.trim() } });
+      logActivity({ action_type: 'client_name_changed', client_id: clientId, details: `Новое имя: ${editName.trim()}` });
       addToast('success', 'Имя обновлено', `Имя клиента изменено на «${editName.trim()}».`);
       setEditingClientId(null);
     } catch (error) {
@@ -130,7 +136,7 @@ export function Dashboard() {
   // Track idle time based on manual stage
   useEffect(() => {
     clients.forEach(client => {
-      trackStageChange(client.id, client.pipelineStage || 'meeting');
+      trackStageChange(client.id, client.pipelineStage || 'new');
     });
   }, [clients]);
 
@@ -139,7 +145,7 @@ export function Dashboard() {
     e.stopPropagation();
     const client = clients.find(c => c.id === clientId);
     if (!client) return;
-    const currentIndex = PIPELINE_STAGES.findIndex(s => s.key === (client.pipelineStage || 'meeting'));
+    const currentIndex = PIPELINE_STAGES.findIndex(s => s.key === (client.pipelineStage || 'new'));
     const newIndex = direction === 'next'
       ? Math.min(currentIndex + 1, PIPELINE_STAGES.length - 1)
       : Math.max(currentIndex - 1, 0);
@@ -147,13 +153,27 @@ export function Dashboard() {
     const newStage = PIPELINE_STAGES[newIndex].key as PipelineStage;
     try {
       await updateClient({ id: clientId, updates: { pipelineStage: newStage } });
+      logActivity({
+        action_type: 'stage_changed',
+        client_id: clientId,
+        client_name: client.name,
+        details: `${PIPELINE_STAGES[currentIndex].label} → ${PIPELINE_STAGES[newIndex].label}`,
+      });
     } catch { /* toast already handled */ }
   };
 
   const acceptRecommendation = async (e: React.MouseEvent, clientId: string, stage: PipelineStage) => {
     e.stopPropagation();
+    const client = clients.find(c => c.id === clientId);
+    const stageLabel = PIPELINE_STAGES.find(s => s.key === stage)?.label || stage;
     try {
       await updateClient({ id: clientId, updates: { pipelineStage: stage } });
+      logActivity({
+        action_type: 'stage_recommendation_accepted',
+        client_id: clientId,
+        client_name: client?.name,
+        details: `Принята рекомендация: ${stageLabel}`,
+      });
       addToast('success', 'Этап обновлён', `Этап переключён на рекомендованный.`);
     } catch { /* ignore */ }
   };
@@ -193,9 +213,19 @@ export function Dashboard() {
         >
           📊 Аналитика
         </button>
+        {isAdmin && (
+          <button
+            className={`dash-tab-btn ${dashView === 'activity' ? 'dash-tab-btn-active' : ''}`}
+            onClick={() => setDashView('activity')}
+          >
+            📋 Журнал
+          </button>
+        )}
       </div>
 
-      {dashView === 'analytics' ? (
+      {dashView === 'activity' && isAdmin ? (
+        <ActivityLog />
+      ) : dashView === 'analytics' ? (
         <AnalyticsDashboard clients={clients} />
       ) : (
       <>
@@ -203,7 +233,7 @@ export function Dashboard() {
       <div className="pipeline-legend">
         {PIPELINE_STAGES.map((stage, i) => (
           <div key={stage.key} className="pipeline-legend-item">
-            <span className="pipeline-legend-number">{i + 1}</span>
+            <span className="pipeline-legend-number">{i}</span>
             <span className="pipeline-legend-emoji">{stage.emoji}</span>
             <span className="pipeline-legend-label">{stage.label}</span>
           </div>
@@ -256,11 +286,12 @@ export function Dashboard() {
           <div className="client-grid">
             {clients.map((client, idx) => {
               // Manual stage (user-controlled)
-              const manualStageKey = client.pipelineStage || 'meeting';
+              const manualStageKey = client.pipelineStage || 'new';
               const stage = PIPELINE_STAGES.find(s => s.key === manualStageKey);
               const index = PIPELINE_STAGES.findIndex(s => s.key === manualStageKey);
               const total = PIPELINE_STAGES.length;
-              const progress = ((index + 1) / total) * 100;
+              const progress = ((index) / (total - 1)) * 100;
+              const isDone = manualStageKey === 'done';
               const isEditing = editingClientId === client.id;
 
               // Recommendation from computed stage
@@ -351,7 +382,7 @@ export function Dashboard() {
                           >›</button>
                         </div>
                         <span className="client-stage-counter">
-                          Этап {index + 1} из {total}
+                          Этап {index} из {total - 1}
                         </span>
                       </div>
                       <div className="client-progress-bar">
@@ -379,7 +410,7 @@ export function Dashboard() {
                         onClick={(e) => acceptRecommendation(e, client.id, rec.computedStage as PipelineStage)}
                         title="Нажмите, чтобы принять рекомендацию"
                       >
-                        💡 Рекомендация: {recStage.emoji} {recStage.label} (этап {recIndex + 1})
+                        💡 Рекомендация: {recStage.emoji} {recStage.label} (этап {recIndex})
                       </div>
                     )}
 
@@ -392,6 +423,27 @@ export function Dashboard() {
 
                     {/* Actions */}
                     <div className="client-card-actions">
+                      {isDone && (
+                        <button
+                          className="btn btn-sm"
+                          style={{ background: 'linear-gradient(135deg, #8b5cf6, #6366f1)', color: 'white' }}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              await updateClient({ id: client.id, updates: { pipelineStage: 'new' as PipelineStage } });
+                              logActivity({
+                                action_type: 'stage_changed',
+                                client_id: client.id,
+                                client_name: client.name,
+                                details: 'Продление: цикл начат заново',
+                              });
+                              addToast('success', 'Цикл продлён', `${client.name} — новый месяц начат!`);
+                            } catch { /* toast */ }
+                          }}
+                        >
+                          🔄 Продлить
+                        </button>
+                      )}
                       <button
                         className="btn btn-primary btn-sm"
                         onClick={(e) => { e.stopPropagation(); selectClient(client.id); }}

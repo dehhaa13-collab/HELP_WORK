@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useToastStore } from '../../../store';
 import { fetchGeminiWithSchema } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
+import { logActivity } from '../../../utils/activityLogger';
 import type { TrafficLightStatus } from '../../../types';
 // heic2any is imported dynamically only when HEIC files are detected (saves ~1.3MB from initial bundle)
 import './AiAnalysisTab.css';
@@ -191,6 +192,7 @@ export function AiAnalysisTab({ clientId }: Props) {
     }
 
     setIsAnalyzing(true);
+    logActivity({ action_type: 'ai_analysis_started', client_id: clientId, details: 'AI-анализ Instagram запущен' });
 
     try {
       const prompt = `Ты — высокопрофессиональный и доброжелательный SMM-наставник в бьюти-сфере (тренды 2024-2025 года). Твоя задача — провести структурированный, объективный и поддерживающий аудит предоставленного скриншота Instagram-профиля мастера.
@@ -263,6 +265,7 @@ export function AiAnalysisTab({ clientId }: Props) {
       setIsAnalyzing(false);
 
       addToast('success', 'Анализ завершён', 'ИИ проанализировал профиль и выставил оценки.');
+      logActivity({ action_type: 'ai_analysis_completed', client_id: clientId, details: 'AI-анализ Instagram завершён успешно' });
     } catch (error) {
       console.error(error);
       setIsAnalyzing(false);
@@ -272,6 +275,7 @@ export function AiAnalysisTab({ clientId }: Props) {
       } else {
         const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
         addToast('error', 'Ошибка анализа', errMsg);
+        logActivity({ action_type: 'ai_analysis_error', client_id: clientId, details: `AI-анализ: ${errMsg}` });
       }
     }
   };

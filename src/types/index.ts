@@ -22,32 +22,34 @@ export interface Client {
   updatedAt: string;
 }
 
-// === Pipeline (11 этапов) ===
+// === Pipeline (12 этапов, 0–11) ===
 export type PipelineStage =
-  | 'meeting'        // 1. Встреча
-  | 'formats'        // 2. Форматы
-  | 'topics'         // 3. Темы
-  | 'scripts'        // 4. Сценарии
-  | 'sources'        // 5. Исходники
-  | 'production'     // 6. Производство
-  | 'ready'          // 7. Готовность
-  | 'delivered'      // 8. Выдача
-  | 'targeting'      // 9. Таргет
-  | 'feedback'       // 10. Фидбек
-  | 'retention';     // 11. Продление
+  | 'new'            // 0. Ничего не сделали
+  | 'meeting'        // 1. Провели встречу
+  | 'analysis'       // 2. Анализ Instagram
+  | 'formats'        // 3. Выбрали форматы
+  | 'topics'         // 4. Утвердили темы
+  | 'scripts'        // 5. Сделали сценарии
+  | 'sources'        // 6. Ждём исходники
+  | 'editing'        // 7. В монтаже
+  | 'cover'          // 8. Обложка
+  | 'delivered'      // 9. Отдали клиенту
+  | 'targeting'      // 10. Реклама
+  | 'done';          // 11. Завершено (+ продление)
 
 export const PIPELINE_STAGES: { key: PipelineStage; label: string; emoji: string }[] = [
-  { key: 'meeting',    label: 'Встреча',      emoji: '🤝' },
-  { key: 'formats',    label: 'Форматы',      emoji: '📱' },
-  { key: 'topics',     label: 'Темы',         emoji: '💡' },
-  { key: 'scripts',    label: 'Сценарии',     emoji: '📝' },
-  { key: 'sources',    label: 'Исходники',    emoji: '📥' },
-  { key: 'production', label: 'Производство', emoji: '⚙️' },
-  { key: 'ready',      label: 'Готовность',   emoji: '✅' },
-  { key: 'delivered',  label: 'Выдача',       emoji: '📤' },
-  { key: 'targeting',  label: 'Таргет',       emoji: '🚀' },
-  { key: 'feedback',   label: 'Фидбек',      emoji: '💬' },
-  { key: 'retention',  label: 'Продление',    emoji: '🔄' },
+  { key: 'new',       label: 'Новый',         emoji: '⬜' },
+  { key: 'meeting',   label: 'Встреча',       emoji: '🤝' },
+  { key: 'analysis',  label: 'Анализ',        emoji: '🔍' },
+  { key: 'formats',   label: 'Форматы',       emoji: '📱' },
+  { key: 'topics',    label: 'Темы',          emoji: '💡' },
+  { key: 'scripts',   label: 'Сценарии',      emoji: '📝' },
+  { key: 'sources',   label: 'Исходники',     emoji: '📥' },
+  { key: 'editing',   label: 'Монтаж',        emoji: '✂️' },
+  { key: 'cover',     label: 'Обложка',       emoji: '🎨' },
+  { key: 'delivered', label: 'Выдача',        emoji: '📤' },
+  { key: 'targeting', label: 'Реклама',       emoji: '🚀' },
+  { key: 'done',      label: 'Завершено',     emoji: '✅' },
 ];
 
 // === Форматы публикаций ===

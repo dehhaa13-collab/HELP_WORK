@@ -140,7 +140,7 @@ export function DashboardTab({ clientId }: Props) {
               </p>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
+              <button
                 className="btn btn-secondary btn-sm"
                 onClick={() => {
                   exportScriptsToWord(scripts);
@@ -149,7 +149,7 @@ export function DashboardTab({ clientId }: Props) {
               >
                 📄 Скачать скрипты
               </button>
-              <button 
+              <button
                 className="btn btn-secondary btn-sm"
                 onClick={() => {
                   exportContentPlanCSV(formatSlots, targetItems, topics);
@@ -160,7 +160,7 @@ export function DashboardTab({ clientId }: Props) {
               </button>
             </div>
           </div>
-          
+
           <div className="kanban-container" style={{ marginTop: '1.5rem' }}>
             <div className="kanban-board">
               {[
@@ -173,7 +173,7 @@ export function DashboardTab({ clientId }: Props) {
                 const colScripts = scripts.filter(s => (s.status || 'idea') === col.id);
                 const si = statusInfo(col.id as ScriptStatus);
                 return (
-                  <div 
+                  <div
                     key={col.id}
                     className="kanban-column"
                     onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }}
@@ -199,8 +199,8 @@ export function DashboardTab({ clientId }: Props) {
                       <span className="kanban-badge" style={{ background: si.bg, color: si.color }}>{colScripts.length}</span>
                     </div>
                     {colScripts.map(script => (
-                      <div 
-                        key={script.id} 
+                      <div
+                        key={script.id}
                         className="kanban-card"
                         draggable
                         onDragStart={(e) => {
@@ -231,7 +231,7 @@ export function DashboardTab({ clientId }: Props) {
                           </div>
                         </details>
                         <div className="kanban-card-actions">
-                           <button 
+                          <button
                             className="btn btn-ghost btn-sm"
                             title="Скопировать"
                             style={{ padding: '0 4px' }}
@@ -240,12 +240,12 @@ export function DashboardTab({ clientId }: Props) {
                               navigator.clipboard.writeText(text);
                               addToast('success', 'Скопировано', 'Текст в буфере');
                             }}
-                           >📋</button>
-                           <button 
-                             className="btn btn-ghost btn-sm" 
-                             style={{ padding: '0 4px', color: 'var(--color-danger)' }}
-                             onClick={() => removeScript(script.id)}
-                            >🗑</button>
+                          >📋</button>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            style={{ padding: '0 4px', color: 'var(--color-danger)' }}
+                            onClick={() => removeScript(script.id)}
+                          >🗑</button>
                         </div>
                       </div>
                     ))}

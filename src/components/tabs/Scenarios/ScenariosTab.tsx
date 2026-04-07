@@ -744,14 +744,6 @@ ${selectedTitles}
                      🔄 Перегенерировать {unapprovedScriptsCount} неодобренных
                    </button>
                  )}
-                 {approvedScriptsCount > 0 && (
-                   <button 
-                     className="btn btn-primary btn-sm"
-                     onClick={syncApprovedToEditing}
-                   >
-                     📤 Перенести {approvedScriptsCount} в «Монтаж»
-                   </button>
-                 )}
                   <button 
                     className="btn btn-secondary btn-sm"
                     onClick={() => {
@@ -812,6 +804,28 @@ ${selectedTitles}
                  </div>
                ))}
              </div>
+
+              {/* Большая кнопка переноса в Монтаж — после списка сценариев */}
+              {approvedScriptsCount > 0 && (
+                <button 
+                  className="btn btn-primary"
+                  onClick={syncApprovedToEditing}
+                  style={{
+                    width: '100%',
+                    padding: '16px 24px',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    marginTop: '1.5rem',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  📤 Перенести {approvedScriptsCount} в «Монтаж»
+                </button>
+              )}
           </div>
         </div>
       )}

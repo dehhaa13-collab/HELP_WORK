@@ -136,7 +136,7 @@ export function DashboardTab({ clientId }: Props) {
             <div>
               <h3 className="ai-section-title" style={{ margin: 0 }}>🗄️ Библиотека контента и Kanban</h3>
               <p className="ai-section-desc" style={{ margin: 0, opacity: 0.8 }}>
-                Сценарии двигаются по этапам: Идея → Одобренный → Съемка → Монтаж → Готово. Статусы обновляются автоматически.
+                Перетаскивайте карточки между колонками для смены статуса.
               </p>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -205,6 +205,11 @@ export function DashboardTab({ clientId }: Props) {
                         draggable
                         onDragStart={(e) => {
                           e.dataTransfer.setData('text/plain', String(script.id));
+                          e.dataTransfer.effectAllowed = 'move';
+                          (e.currentTarget as HTMLElement).classList.add('dragging');
+                        }}
+                        onDragEnd={(e) => {
+                          (e.currentTarget as HTMLElement).classList.remove('dragging');
                         }}
                         style={{ borderLeft: `3px solid ${si.color}` }}
                       >

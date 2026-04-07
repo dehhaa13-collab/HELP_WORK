@@ -50,7 +50,7 @@ export function AnalyticsDashboard({ clients }: Props) {
 
     // Count stages
     clients.forEach(client => {
-      const stage = computeClientStage(client.id);
+      const stage = computeClientStage(client.id, client.workspaceData);
       stageCounts[stage] = (stageCounts[stage] || 0) + 1;
 
       // Read finance data from workspaceData
@@ -309,7 +309,7 @@ export function AnalyticsDashboard({ clients }: Props) {
                 .slice()
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .map(client => {
-                  const stage = computeClientStage(client.id);
+                  const stage = computeClientStage(client.id, client.workspaceData);
                   const stageInfo = PIPELINE_STAGES.find(s => s.key === stage);
                   return (
                     <div key={client.id} className="analytics-timeline-row">

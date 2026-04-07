@@ -1,20 +1,30 @@
 /* ============================================
    Авто-расчёт этапа клиента по данным из вкладок
-   Читает localStorage и определяет, на каком этапе
-   pipeline находится клиент, основываясь на реальном
-   прогрессе, а не на ручном переключении.
+   Читает workspace_data (облако) с фоллбеком на localStorage.
    ============================================ */
 
 import type { PipelineStage } from '../types';
 
 /**
  * Вычисляет текущий этап клиента на основе заполненности вкладок.
- * Логика: каждый этап считается "пройденным", если соответствующие данные заполнены.
+ * 
+ * @param clientId — ID клиента
+ * @param workspaceData — облачные данные клиента (workspace_data из Supabase).
+ *   Если передано — читает из него (источник истины).
+ *   Если нет — фоллбек на localStorage (оффлайн / legacy).
  */
-export function computeClientStage(clientId: string): PipelineStage {
-  // --- Читаем данные из localStorage ---
+export function computeClientStage(clientId: string, workspaceData?: Record<string, any>): PipelineStage {
+  // --- Универсальный геттер: облако → localStorage → default ---
   const get = <T>(key: string, fallback: T): T => {
     try {
+      // 1. Облако (приоритет)
+      if (workspaceData && workspaceData[key] !== undefined) {
+        const val = workspaceData[key];
+        if (val === null) return fallback;
+        if (Array.isArray(fallback) && !Array.isArray(val)) return fallback;
+        return val as T;
+      }
+      // 2. localStorage (фоллбек)
       const raw = localStorage.getItem(key);
       if (!raw) return fallback;
       const parsed = JSON.parse(raw);

@@ -121,7 +121,7 @@ export function Dashboard() {
   // Memoized stage computation — avoids calling computeClientStage on every render
   const clientStages = useMemo(() => {
     return clients.map(client => {
-      const computedStage = computeClientStage(client.id);
+      const computedStage = computeClientStage(client.id, client.workspaceData);
       const stage = PIPELINE_STAGES.find((s) => s.key === computedStage);
       const index = PIPELINE_STAGES.findIndex((s) => s.key === computedStage);
       const daysIdle = getDaysOnCurrentStage(client.id, client.createdAt);

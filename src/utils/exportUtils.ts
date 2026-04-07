@@ -167,8 +167,22 @@ export async function exportScriptsToWord(scripts: ScriptItem[]) {
     }],
   });
 
-  const blob = await Packer.toBlob(doc);
-  saveAs(blob, `Контент_стратегія_${new Date().toISOString().slice(0,10)}.docx`);
+  const rawBlob = await Packer.toBlob(doc);
+  // Re-wrap with explicit MIME type for Safari compatibility
+  const arrayBuf = await rawBlob.arrayBuffer();
+  const blob = new Blob([arrayBuf], {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Сценарии_${new Date().toISOString().slice(0,10)}.docx`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 100);
 }
 
 // Helper для создания строк таблицы с отступами и шрифтами

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthStore, useClientStore, useToastStore } from '../../store';
 import { useClients, useAddClient, useUpdateClient, useRemoveClient } from '../../hooks/useClients';
 import { PIPELINE_STAGES } from '../../types';
@@ -118,20 +118,25 @@ export function Dashboard() {
     }
   };
 
-  const getStageInfo = (client: Client) => {
-    // Авто-расчёт этапа из реального прогресса
-    const computedStage = computeClientStage(client.id);
-    const stage = PIPELINE_STAGES.find((s) => s.key === computedStage);
-    const index = PIPELINE_STAGES.findIndex((s) => s.key === computedStage);
+  // Memoized stage computation — avoids calling computeClientStage on every render
+  const clientStages = useMemo(() => {
+    return clients.map(client => {
+      const computedStage = computeClientStage(client.id);
+      const stage = PIPELINE_STAGES.find((s) => s.key === computedStage);
+      const index = PIPELINE_STAGES.findIndex((s) => s.key === computedStage);
+      const daysIdle = getDaysOnCurrentStage(client.id, client.createdAt);
+      const idleLevel = getIdleLevel(daysIdle);
+      const idleHint = getIdleHint(daysIdle);
+      return { clientId: client.id, computedStage, stage, index, total: PIPELINE_STAGES.length, daysIdle, idleLevel, idleHint };
+    });
+  }, [clients]);
 
-    // Отслеживаем смену этапа
-    trackStageChange(client.id, computedStage);
-    const daysIdle = getDaysOnCurrentStage(client.id, client.createdAt);
-    const idleLevel = getIdleLevel(daysIdle);
-    const idleHint = getIdleHint(daysIdle);
-
-    return { stage, index, total: PIPELINE_STAGES.length, daysIdle, idleLevel, idleHint };
-  };
+  // Track stage changes as a side effect (not during render)
+  useEffect(() => {
+    clientStages.forEach(({ clientId, computedStage }) => {
+      trackStageChange(clientId, computedStage);
+    });
+  }, [clientStages]);
 
   return (
     <div className="dashboard">
@@ -229,8 +234,10 @@ export function Dashboard() {
           </div>
         ) : (
           <div className="client-grid">
-            {clients.map((client) => {
-              const { stage, index, total, idleLevel, idleHint, daysIdle } = getStageInfo(client);
+            {clients.map((client, idx) => {
+              const stageData = clientStages[idx];
+              if (!stageData) return null;
+              const { stage, index, total, idleLevel, idleHint, daysIdle } = stageData;
               const progress = ((index + 1) / total) * 100;
               const isEditing = editingClientId === client.id;
 

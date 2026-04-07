@@ -1,83 +1,101 @@
 /* ============================================
-   usePersistedState — useState + localStorage
-   Данные сохраняются при переключении вкладок/клиентов
+   usePersistedState — useState + Cloud Sync
+   OPTIMIZED: direct cache reads instead of N
+   separate useClients() subscriptions.
    ============================================ */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { migrateData } from './migrations';
 import { useClientStore } from '../store';
-import { useClients, useUpdateWorkspaceData } from '../hooks/useClients';
+import { useUpdateWorkspaceData } from '../hooks/useClients';
+import type { Client } from '../types';
 
-/**
- * Раньше: LocalStorage State
- * ТЕПЕРЬ: Облачный State (Multiplayer)
- * Автоматически сохраняет и загружает данные из `workspace_data` Supabase.
- * При потере интернета продолжает работать с localStorage.
- */
 export function usePersistedState<T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
   const defaultRef = useRef(defaultValue);
-
-  // Подключаемся к глобальному стору Supabase
-  const { data: clients = [] } = useClients();
+  const queryClient = useQueryClient();
   const selectedClientId = useClientStore((s) => s.selectedClientId);
+
+  // Stable ref for update function
   const updateWorkspaceData = useUpdateWorkspaceData();
+  const updateRef = useRef(updateWorkspaceData);
+  updateRef.current = updateWorkspaceData;
 
-  const client = clients.find((c) => c.id === selectedClientId);
-  const cloudValue = client?.workspaceData?.[key];
+  // Read cloud value directly from cache — NO subscription!
+  const readCloudValue = useCallback((): any => {
+    if (!selectedClientId) return undefined;
+    const clients = queryClient.getQueryData<Client[]>(['clients']);
+    if (!clients) return undefined;
+    const client = clients.find((c: Client) => c.id === selectedClientId);
+    return client?.workspaceData?.[key];
+  }, [queryClient, selectedClientId, key]);
 
-  // Инициализация значения при загрузке компонента
+  // Initialize from cloud → localStorage → default
   const [value, setValueRaw] = useState<T>(() => {
-    // 1. Пробуем облако
-    if (cloudValue !== undefined) {
-      return migrateData(key, cloudValue);
-    }
-    // 2. Фоллбек на локальное хранилище (оффлайн режим или до первой синхронизации)
+    const cv = readCloudValue();
+    if (cv !== undefined) return migrateData(key, cv);
     try {
       const saved = localStorage.getItem(key);
-      if (saved !== null) {
-        return migrateData(key, JSON.parse(saved));
-      }
-    } catch { /* игнор */ }
+      if (saved !== null) return migrateData(key, JSON.parse(saved));
+    } catch { /* ignore */ }
     return defaultRef.current;
   });
 
-  // Синхронизация с облаком и обработка смены ключа (клиента)
-  useEffect(() => {
-    let nextVal: T;
+  // Track last known cloud string to skip echo updates
+  const prevCloudStrRef = useRef<string>('');
 
-    if (cloudValue !== undefined) {
-      nextVal = migrateData(key, cloudValue);
-    } else {
-      try {
-        const saved = localStorage.getItem(key);
-        nextVal = saved !== null ? migrateData(key, JSON.parse(saved)) : defaultRef.current;
-      } catch {
-        nextVal = defaultRef.current;
-      }
+  // Lightweight cache subscription — only reacts to 'clients' changes for THIS key
+  useEffect(() => {
+    const initialCV = readCloudValue();
+    if (initialCV !== undefined) {
+      const initialStr = JSON.stringify(initialCV);
+      prevCloudStrRef.current = initialStr;
+      const migrated = migrateData(key, initialCV);
+      const migratedStr = JSON.stringify(migrated);
+      setValueRaw(current => JSON.stringify(current) !== migratedStr ? migrated : current);
     }
 
-    const nextValStr = JSON.stringify(nextVal);
-    // Обновляем локальный стейт только если он реально отличается от облачного (избегаем лупов)
-    setValueRaw((currentVal) => (JSON.stringify(currentVal) !== nextValStr ? nextVal : currentVal));
-  }, [key, cloudValue]);
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (!event?.query || event.query.queryKey[0] !== 'clients') return;
 
-  // Обёртка setState → сохраняет в React state, localStorage И в Supabase
+      const cv = readCloudValue();
+      const cvStr = cv !== undefined ? JSON.stringify(cv) : '';
+
+      if (cvStr && cvStr !== prevCloudStrRef.current) {
+        prevCloudStrRef.current = cvStr;
+        const migrated = migrateData(key, cv);
+        const migratedStr = JSON.stringify(migrated);
+        setValueRaw(current => JSON.stringify(current) !== migratedStr ? migrated : current);
+      }
+    });
+
+    return unsubscribe;
+  }, [key, readCloudValue, queryClient]);
+
+  // Stable refs for setter
+  const selectedClientIdRef = useRef(selectedClientId);
+  selectedClientIdRef.current = selectedClientId;
+  const keyRef = useRef(key);
+  keyRef.current = key;
+
+  // Setter: local state → localStorage → Supabase (debounced)
   const setValue = useCallback<React.Dispatch<React.SetStateAction<T>>>((action) => {
     setValueRaw((prev) => {
       const next = action instanceof Function ? action(prev) : action;
-      
-      // Локальный кеш для оффлайна
-      try { localStorage.setItem(key, JSON.stringify(next)); } catch { }
 
-      // Мультиплеер (Облако) - только если выбран клиент
-      if (selectedClientId) {
-        // Мы вызываем это напрямую, внутри store встроен дебаунс (чтобы не убить БД при быстром наборе текста)
-        updateWorkspaceData(selectedClientId, key, next);
+      try { localStorage.setItem(keyRef.current, JSON.stringify(next)); } catch { /* quota */ }
+
+      // Update ref BEFORE triggering subscription to prevent echo
+      prevCloudStrRef.current = JSON.stringify(next);
+
+      const cid = selectedClientIdRef.current;
+      if (cid) {
+        updateRef.current(cid, keyRef.current, next);
       }
 
       return next;
     });
-  }, [key, selectedClientId, updateWorkspaceData]);
+  }, []); // Fully stable — uses refs
 
   return [value, setValue];
 }

@@ -6,7 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../utils/supabase';
 import type { Client, PipelineStage } from '../types';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 
 // Маппинг: snake_case (БД) -> camelCase (фронтенд)
 const mapDbToClient = (row: Record<string, unknown>): Client => ({
@@ -38,6 +38,8 @@ export function useClients() {
       if (error) throw new Error(`[Supabase] Ошибка загрузки: ${error.message}`);
       return (data || []).map(mapDbToClient);
     },
+    staleTime: 30_000,          // 30s — don't refetch if data is fresh
+    refetchOnWindowFocus: false, // Realtime subscription handles live updates
   });
 
   // Инициализация Realtime подписки (один раз на клиенте)
@@ -141,9 +143,8 @@ export function useUpdateClient() {
 export function useUpdateWorkspaceData() {
   const queryClient = useQueryClient();
 
-  // Мы не используем классический useMutation для каждого чиха, 
-  // вместо этого мы делаем ручную дебаунс-отправку.
-  return (id: string, key: string, data: any) => {
+  // Мемоизированная функция — стабильная ссылка, не пересоздается на каждом рендере
+  return useCallback((id: string, key: string, data: any) => {
     // 1. Оптимистично обновляем кеш React Query (мгновенный UI)
     queryClient.setQueryData(['clients'], (oldClients: Client[] | undefined) => {
       if (!oldClients) return oldClients;
@@ -163,7 +164,6 @@ export function useUpdateWorkspaceData() {
     if ((window as any)[timerId]) clearTimeout((window as any)[timerId]);
     
     (window as any)[timerId] = setTimeout(async () => {
-      // К моменту выполнения таймаута забираем самое актуальное состояние из кеша
       const currentClients = queryClient.getQueryData<Client[]>(['clients']);
       const clientToUpdate = currentClients?.find(c => c.id === id);
       
@@ -172,10 +172,7 @@ export function useUpdateWorkspaceData() {
           .from('clients')
           .update({ workspace_data: clientToUpdate.workspaceData })
           .eq('id', id);
-          
-        // Здесь не делаем invalidateQueries, так как данные мы уже и так оптимистично положили в кеш, 
-        // а Realtime принесет их только если нужно (и не сломает, т.к. наши совпадают).
       }
     }, 1500);
-  };
+  }, [queryClient]);
 }

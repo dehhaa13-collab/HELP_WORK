@@ -37,44 +37,52 @@ const migrations: MigrationFn[] = [
   // }
 ];
 
+// In-memory cache to avoid redundant localStorage reads for version checks
+const versionCache = new Map<string, number>();
+
 /**
  * Проверяет текущую версию данных и последовательно натравливает функции миграции,
  * пока не дойдет до CURRENT_VERSION.
  */
 export function migrateData(key: string, rawData: any): any {
   if (rawData === null || rawData === undefined) return rawData;
-  if (typeof rawData !== 'object') return rawData; // Строки и булеаны не мигрируем
+  if (typeof rawData !== 'object') return rawData;
 
-  // Сохраняем версию в отдельный ключ с суффиксом __v
+  // Fast path: check in-memory cache first (avoids localStorage read)
+  const cachedVer = versionCache.get(key);
+  if (cachedVer !== undefined && cachedVer >= CURRENT_VERSION) {
+    return rawData;
+  }
+
   const versionKey = `${key}__v`;
   const currentVerStr = localStorage.getItem(versionKey);
-  const currentVer = currentVerStr ? Number(currentVerStr) : 1; // У всего старого default v1
+  const currentVer = currentVerStr ? Number(currentVerStr) : 1;
+
+  // Cache the version
+  versionCache.set(key, currentVer);
 
   if (currentVer >= CURRENT_VERSION) {
-    return rawData; // Миграция не требуется
+    return rawData;
   }
 
   let data = rawData;
   
-  // Проходим по миграциям от текущей до актуальной
   for (const m of migrations) {
     if (m.version > currentVer) {
       try {
         data = m.migrate(key, data);
       } catch (err) {
         console.error(`[Миграция v${m.version}] Ошибка миграции ключа ${key}:`, err);
-        // Если миграция упала, лучше вернуть дефолтные сырые данные, чем крашиться
       }
     }
   }
 
   try {
-    // Сохраняем обновленные данные и новую версию сразу же назад
     localStorage.setItem(key, JSON.stringify(data));
     localStorage.setItem(versionKey, String(CURRENT_VERSION));
-    console.log(`[Storage] Мигрировал ключ ${key} до v${CURRENT_VERSION}`);
+    versionCache.set(key, CURRENT_VERSION);
   } catch {
-    // Игнорируем quota errors
+    // Ignore quota errors
   }
 
   return data;

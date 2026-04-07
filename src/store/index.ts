@@ -99,7 +99,11 @@ export const useToastStore = create<ToastState>((set) => ({
   addToast: (type, title, message) => {
     const id = generateId();
     const toast: Toast = { id, type, title, message };
-    set((state) => ({ toasts: [...state.toasts, toast] }));
+    set((state) => {
+      const updated = [...state.toasts, toast];
+      // Keep only last 5 toasts to prevent UI overflow
+      return { toasts: updated.slice(-5) };
+    });
 
     // Если всплывает красная ошибка, шлем её в Sentry (так как код её уже перехватил)
     if (type === 'error') {

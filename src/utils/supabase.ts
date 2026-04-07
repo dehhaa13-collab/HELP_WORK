@@ -4,7 +4,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const getSupabaseUrl = () => 'https://egduscijdjjnxlxphfoe.supabase.co';
+export const SUPABASE_URL = 'https://egduscijdjjnxlxphfoe.supabase.co';
 
 const getSupabaseKey = () => {
   // Obfuscated to bypass GitHub secret scanning
@@ -17,4 +17,5 @@ const getSupabaseKey = () => {
   return [p1, p2, p3, p4, p5, p6].join('');
 };
 
-export const supabase = createClient(getSupabaseUrl(), getSupabaseKey());
+export const SUPABASE_ANON_KEY = getSupabaseKey();
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

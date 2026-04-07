@@ -58,56 +58,7 @@
 .sidebar-client-avatar {
   width: 56px;
   height: 56px;
-  border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--color-primary) 0%, #7C3AED 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #FFFFFF;
-  font-size: var(--font-size-2xl);
-  font-weight: 700;
-  margin: 0 auto var(--space-3);
-}
-
-.sidebar-client-name {
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  color: #FFFFFF;
-  margin-bottom: var(--space-1);
-}
-
-.sidebar-client-ig {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-  display: block;
-  margin-bottom: var(--space-3);
-}
-
-.sidebar-stage-badge {
-  display: inline-block;
-  font-size: var(--font-size-xs);
-  padding: var(--space-1) var(--space-3);
-  background-color: rgba(37, 99, 235, 0.2);
-  color: #93C5FD;
-  border-radius: var(--radius-full);
-}
-
-.sidebar-recommendation {
-  display: inline-block;
-  font-size: 11px;
-  padding: 3px 10px;
-  background-color: rgba(245, 158, 11, 0.15);
-  color: #FCD34D;
-  border-radius: var(--radius-full);
-  margin-top: 4px;
-  cursor: default;
-}
-
-/* Nav */
-.sidebar-nav {
-  flex: 1;
-  padding: var(--space-3);
-  display: flex;
+  Ёимdisplay: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
@@ -173,7 +124,8 @@
 
 .workspace-tab-content {
   padding: var(--space-6) var(--space-8);
-  max-width: 1600px; /* Expanded for full desktop monitor usage */
+  max-width: 1600px;
+  /* Expanded for full desktop monitor usage */
   margin: 0 auto;
 }
 
@@ -267,7 +219,8 @@
   /* Workspace tab header adjustments for mobile */
   .workspace-tab-header {
     padding: var(--space-3) var(--space-4);
-    position: static; /* Don't sticky on mobile — we have mobile-header */
+    position: static;
+    /* Don't sticky on mobile — we have mobile-header */
   }
 
   .workspace-tab-title {
@@ -309,7 +262,8 @@
   }
 
   .mobile-nav-item {
-    flex: 0 0 calc(100vw / 5); /* show exactly 5 tabs per screen */
+    flex: 0 0 calc(100vw / 5);
+    /* show exactly 5 tabs per screen */
     scroll-snap-align: start;
     display: flex;
     flex-direction: column;
@@ -402,8 +356,13 @@
 }
 
 @keyframes tabLoaderSlide {
-  0% { left: -50%; }
-  100% { left: 100%; }
+  0% {
+    left: -50%;
+  }
+
+  100% {
+    left: 100%;
+  }
 }
 
 .tab-loader-text {
@@ -413,6 +372,13 @@
 }
 
 @keyframes tabLoaderPulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }

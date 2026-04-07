@@ -4,7 +4,7 @@
    ============================================ */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../utils/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../utils/supabase';
 import type { Client, PipelineStage } from '../types';
 import { useEffect, useCallback } from 'react';
 
@@ -20,9 +20,50 @@ const mapDbToClient = (row: Record<string, unknown>): Client => ({
   updatedAt: row.updated_at as string,
 });
 
+// ============================================
+// FIX #6: Safe debounce with Map (replaces window pollution)
+// FIX #1: beforeunload flush to prevent data loss
+// ============================================
+const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const pendingFlushData = new Map<string, Record<string, any>>();
+
+/**
+ * Flush all pending workspace saves to Supabase.
+ * Uses fetch with keepalive: true so requests survive page unload.
+ */
+function flushAllPendingUpdates() {
+  // Clear all debounce timers
+  pendingTimers.forEach(timer => clearTimeout(timer));
+  pendingTimers.clear();
+
+  // Send any unsaved data via keepalive fetch
+  pendingFlushData.forEach((workspaceData, clientId) => {
+    try {
+      fetch(`${SUPABASE_URL}/rest/v1/clients?id=eq.${clientId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({ workspace_data: workspaceData }),
+        keepalive: true, // Survives page unload
+      }).catch(() => {});
+    } catch { /* ignore */ }
+  });
+  pendingFlushData.clear();
+}
+
+// Register beforeunload once (module-level, runs on import)
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', flushAllPendingUpdates);
+}
+
 /**
  * Хук для получения всех клиентов из базы.
  * Он автоматически подписывается на изменения (Realtime).
+ * FIX #2: handles Realtime disconnection + visibility change.
  */
 export function useClients() {
   const queryClient = useQueryClient();
@@ -39,21 +80,37 @@ export function useClients() {
       return (data || []).map(mapDbToClient);
     },
     staleTime: 30_000,          // 30s — don't refetch if data is fresh
-    refetchOnWindowFocus: false, // Realtime subscription handles live updates
+    refetchOnWindowFocus: false, // Realtime + visibilitychange handles updates
   });
 
-  // Инициализация Realtime подписки (один раз на клиенте)
   useEffect(() => {
+    // Realtime subscription with error handling
     const channel = supabase
       .channel('clients-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, () => {
-        // Делаем invalidate, чтобы React Query сам скачал обновленные данные
         queryClient.invalidateQueries({ queryKey: ['clients'] });
       })
-      .subscribe();
+      .subscribe((status) => {
+        // FIX #2: Handle channel errors (timeout, disconnect)
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn(`[Realtime] Channel ${status}, refetching data...`);
+          setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['clients'] });
+          }, 3000);
+        }
+      });
+
+    // FIX #2: Refetch when tab becomes visible (handles laptop sleep/wake)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        queryClient.invalidateQueries({ queryKey: ['clients'] });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       supabase.removeChannel(channel);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [queryClient]);
 
@@ -88,7 +145,6 @@ export function useAddClient() {
       return mapDbToClient(data);
     },
     onSuccess: () => {
-      // Инвалидация обновит список
       queryClient.invalidateQueries({ queryKey: ['clients'] });
     },
   });
@@ -104,6 +160,16 @@ export function useRemoveClient() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('clients').delete().eq('id', id);
       if (error) throw new Error(`Не удалось удалить клиента: ${error.message}`);
+
+      // Clean up any pending updates for this client
+      pendingTimers.forEach((timer, key) => {
+        if (key === `ws_${id}`) {
+          clearTimeout(timer);
+          pendingTimers.delete(key);
+        }
+      });
+      pendingFlushData.delete(id);
+
       return id;
     },
     onSuccess: () => {
@@ -137,13 +203,13 @@ export function useUpdateClient() {
 }
 
 /**
- * Хук для обновления Workspace Data с локальным Дебаунсом и Оптимистичным UI.
- * Возвращает функцию, которую можно вызывать на каждое нажатие клавиши.
+ * Хук для обновления Workspace Data с дебаунсом и оптимистичным UI.
+ * FIX #1: Tracks pending data for beforeunload flush.
+ * FIX #6: Uses Map instead of window[timerId].
  */
 export function useUpdateWorkspaceData() {
   const queryClient = useQueryClient();
 
-  // Мемоизированная функция — стабильная ссылка, не пересоздается на каждом рендере
   return useCallback((id: string, key: string, data: any) => {
     // 1. Оптимистично обновляем кеш React Query (мгновенный UI)
     queryClient.setQueryData(['clients'], (oldClients: Client[] | undefined) => {
@@ -159,20 +225,33 @@ export function useUpdateWorkspaceData() {
       });
     });
 
-    // 2. Дебаунс сети
-    const timerId = `workspaceUpdateTimer_${id}`;
-    if ((window as any)[timerId]) clearTimeout((window as any)[timerId]);
-    
-    (window as any)[timerId] = setTimeout(async () => {
-      const currentClients = queryClient.getQueryData<Client[]>(['clients']);
-      const clientToUpdate = currentClients?.find(c => c.id === id);
-      
+    // 2. Track latest data for beforeunload flush (FIX #1)
+    const currentClients = queryClient.getQueryData<Client[]>(['clients']);
+    const client = currentClients?.find(c => c.id === id);
+    if (client) {
+      pendingFlushData.set(id, client.workspaceData);
+    }
+
+    // 3. Debounced save using Map (FIX #6)
+    const timerId = `ws_${id}`;
+    const existingTimer = pendingTimers.get(timerId);
+    if (existingTimer) clearTimeout(existingTimer);
+
+    pendingTimers.set(timerId, setTimeout(async () => {
+      pendingTimers.delete(timerId);
+
+      const clients = queryClient.getQueryData<Client[]>(['clients']);
+      const clientToUpdate = clients?.find(c => c.id === id);
+
       if (clientToUpdate) {
         await supabase
           .from('clients')
           .update({ workspace_data: clientToUpdate.workspaceData })
           .eq('id', id);
+
+        // Successfully saved — remove from pending flush
+        pendingFlushData.delete(id);
       }
-    }, 1500);
+    }, 1500));
   }, [queryClient]);
 }

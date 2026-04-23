@@ -285,3 +285,89 @@ export async function fetchGeminiWithSchema<T>(
 
   throw new Error('Непредвиденная цепочка ошибок при генерации.');
 }
+
+/**
+ * Функция для работы с OpenAI API через наш прокси /api/openai
+ */
+export async function fetchOpenAIWithSchema<T>(
+  messages: any[],
+  schema: z.ZodType<T>,
+  temperature = 0.7,
+  model = 'gpt-4o-mini' // или gpt-4o
+): Promise<T> {
+  const maxRetries = 2;
+  const jsonSchema = zodToJsonSchema(schema as any, { target: 'openApi3' });
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    // Подготовка payload для OpenAI
+    const openAiMessages = messages.map(msg => {
+      if (msg.role === 'user' && Array.isArray(msg.content)) {
+        const parts = msg.content.map((part: any) => {
+          if (part.type === 'text') return { type: 'text', text: part.text };
+          if (part.type === 'image_url') return { type: 'image_url', image_url: { url: part.image_url.url } };
+          return part;
+        });
+        return { role: 'user', content: parts };
+      }
+      return msg;
+    });
+
+    const body = {
+      model: model,
+      messages: openAiMessages,
+      temperature: temperature,
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'analysis_schema',
+          schema: jsonSchema,
+          strict: true
+        }
+      }
+    };
+
+    let textResponse = '';
+    try {
+      const response = await fetch('/api/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || data.error || 'Ошибка OpenAI API');
+      }
+
+      textResponse = data.choices[0].message.content;
+    } catch (error: any) {
+      if (attempt === maxRetries) throw new Error(`Ошибка сети OpenAI: ${error.message}`);
+      await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+      continue;
+    }
+
+    let rawJson: any;
+    try {
+      rawJson = extractJsonFromText(textResponse);
+    } catch (e: any) {
+      if (attempt === maxRetries) throw new Error('OpenAI не смог выдать структуру JSON.');
+      messages.push({ role: 'assistant', content: textResponse });
+      messages.push({ role: 'user', content: 'ОШИБКА: Твой ответ не является валидным JSON-объектом/массивом или ты обернул его неверно. Выведи строго чистый JSON без объяснений!' });
+      continue;
+    }
+
+    const result = schema.safeParse(rawJson);
+    if (result.success) {
+      return result.data;
+    } else {
+      if (attempt === maxRetries) {
+        throw new Error('OpenAI не справился с форматом данных. Попробуйте еще раз.');
+      }
+      const errorStr = result.error.issues.map(i => `'${i.path.join('.')}' -> ${i.message}`).join('; ');
+      messages.push({ role: 'assistant', content: JSON.stringify(rawJson) });
+      messages.push({ role: 'user', content: `ОШИБКА АРХИТЕКТУРЫ: Твой JSON не прошёл проверку схемы. Заполни пропущенные поля или исправь типы: ${errorStr}\nПожалуйста, сгенерируй исправленный JSON-ответ.` });
+    }
+  }
+
+  throw new Error('Непредвиденная цепочка ошибок при генерации.');
+}

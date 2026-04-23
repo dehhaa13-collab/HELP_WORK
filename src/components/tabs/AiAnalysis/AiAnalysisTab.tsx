@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import { useState, useEffect } from 'react';
 import { useToastStore } from '../../../store';
-import { fetchGeminiWithSchema } from '../../../utils/geminiApi';
+import { fetchGeminiWithSchema, fetchOpenAIWithSchema } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
 import { logActivity } from '../../../utils/activityLogger';
 import type { TrafficLightStatus } from '../../../types';
@@ -51,6 +51,7 @@ export function AiAnalysisTab({ clientId }: Props) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [aiProvider, setAiProvider] = usePersistedState<'gemini' | 'openai'>(`hw_ai_provider_${clientId}`, 'gemini');
 
   /**
    * Сжимает изображение через Canvas API.
@@ -252,7 +253,12 @@ export function AiAnalysisTab({ clientId }: Props) {
         aiSummary: z.string().min(10)
       });
 
-      const parsed = await fetchGeminiWithSchema(messages, AiAnalysisSchema, 0.1);
+      let parsed;
+      if (aiProvider === 'openai') {
+        parsed = await fetchOpenAIWithSchema(messages, AiAnalysisSchema, 0.1);
+      } else {
+        parsed = await fetchGeminiWithSchema(messages, AiAnalysisSchema, 0.1);
+      }
 
       /* Сохраняем ТОЛЬКО результаты (без скриншота) → гарантированно влезет в localStorage */
       setResult({
@@ -318,6 +324,20 @@ export function AiAnalysisTab({ clientId }: Props) {
           <p className="ai-section-desc">
             Загрузите скриншот Instagram-страницы клиента для AI-анализа.
           </p>
+
+          <div className="ai-provider-toggle-wrap">
+            <div className="provider-toggle-styled" onClick={() => setAiProvider(prev => prev === 'gemini' ? 'openai' : 'gemini')}>
+              <span className={`pt-label pt-free ${aiProvider === 'openai' ? 'dimmed' : ''}`}>
+                🟢 Gemini <span>бесплатно</span>
+              </span>
+              <div className={`pt-switch ${aiProvider === 'openai' ? 'active' : ''}`}>
+                <div className="pt-dot"></div>
+              </div>
+              <span className={`pt-label pt-paid ${aiProvider !== 'openai' ? 'dimmed' : ''}`}>
+                ⚡ OpenAI <span>платный</span>
+              </span>
+            </div>
+          </div>
 
           {screenshotPreview ? (
             <div className="ai-screenshot-preview">

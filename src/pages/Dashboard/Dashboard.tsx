@@ -125,34 +125,58 @@ export function Dashboard() {
     }
   };
 
-  // Computed stages — автоматический расчёт этапа по данным вкладок
-  const computedStages = useMemo(() => {
+  // Computed stages — used as RECOMMENDATIONS only
+  const recommendedStages = useMemo(() => {
     return clients.map(client => ({
       clientId: client.id,
       computedStage: computeClientStage(client.id, client.workspaceData),
     }));
   }, [clients]);
 
-  // Авто-синхронизация: если вычисленный этап отличается от сохранённого — обновляем в БД
+  // Track idle time based on manual stage
   useEffect(() => {
-    computedStages.forEach(({ clientId, computedStage }) => {
-      const client = clients.find(c => c.id === clientId);
-      if (!client) return;
-      const savedStage = client.pipelineStage || 'new';
-      if (computedStage !== savedStage) {
-        updateClient({ id: clientId, updates: { pipelineStage: computedStage as PipelineStage } }).catch(() => {});
-      }
+    clients.forEach(client => {
+      trackStageChange(client.id, client.pipelineStage || 'new');
     });
-  }, [computedStages, clients, updateClient]);
+  }, [clients]);
 
-  // Track idle time based on computed stage
-  useEffect(() => {
-    computedStages.forEach(({ clientId, computedStage }) => {
-      trackStageChange(clientId, computedStage);
-    });
-  }, [computedStages]);
+  // === Manual stage navigation ===
+  const handleStageChange = async (e: React.MouseEvent, clientId: string, direction: 'prev' | 'next') => {
+    e.stopPropagation();
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return;
+    const currentIndex = PIPELINE_STAGES.findIndex(s => s.key === (client.pipelineStage || 'new'));
+    const newIndex = direction === 'next'
+      ? Math.min(currentIndex + 1, PIPELINE_STAGES.length - 1)
+      : Math.max(currentIndex - 1, 0);
+    if (newIndex === currentIndex) return;
+    const newStage = PIPELINE_STAGES[newIndex].key as PipelineStage;
+    try {
+      await updateClient({ id: clientId, updates: { pipelineStage: newStage } });
+      logActivity({
+        action_type: 'stage_changed',
+        client_id: clientId,
+        client_name: client.name,
+        details: `${PIPELINE_STAGES[currentIndex].label} → ${PIPELINE_STAGES[newIndex].label}`,
+      });
+    } catch { /* toast already handled */ }
+  };
 
-  // Manual stage change removed — stages are now fully automatic
+  const acceptRecommendation = async (e: React.MouseEvent, clientId: string, stage: PipelineStage) => {
+    e.stopPropagation();
+    const client = clients.find(c => c.id === clientId);
+    const stageLabel = PIPELINE_STAGES.find(s => s.key === stage)?.label || stage;
+    try {
+      await updateClient({ id: clientId, updates: { pipelineStage: stage } });
+      logActivity({
+        action_type: 'stage_recommendation_accepted',
+        client_id: clientId,
+        client_name: client?.name,
+        details: `Принята рекомендация: ${stageLabel}`,
+      });
+      addToast('success', 'Этап обновлён', `Этап переключён на рекомендованный.`);
+    } catch { /* ignore */ }
+  };
 
   return (
     <div className="dashboard">
@@ -261,17 +285,22 @@ export function Dashboard() {
         ) : (
           <div className="client-grid">
             {clients.map((client, idx) => {
-              // Auto-computed stage from tab progress
-              const computed = computedStages[idx];
-              const autoStageKey = computed?.computedStage || client.pipelineStage || 'new';
-              const stage = PIPELINE_STAGES.find(s => s.key === autoStageKey);
-              const index = PIPELINE_STAGES.findIndex(s => s.key === autoStageKey);
+              // Manual stage (user-controlled)
+              const manualStageKey = client.pipelineStage || 'new';
+              const stage = PIPELINE_STAGES.find(s => s.key === manualStageKey);
+              const index = PIPELINE_STAGES.findIndex(s => s.key === manualStageKey);
               const total = PIPELINE_STAGES.length;
               const progress = ((index) / (total - 1)) * 100;
-              const isDone = autoStageKey === 'done';
+              const isDone = manualStageKey === 'done';
               const isEditing = editingClientId === client.id;
 
-              // Idle tracking
+              // Recommendation from computed stage
+              const rec = recommendedStages[idx];
+              const hasRecommendation = rec && rec.computedStage !== manualStageKey;
+              const recStage = hasRecommendation ? PIPELINE_STAGES.find(s => s.key === rec.computedStage) : null;
+              const recIndex = hasRecommendation ? PIPELINE_STAGES.findIndex(s => s.key === rec.computedStage) : -1;
+
+              // Idle tracking uses manual stage
               const daysIdle = getDaysOnCurrentStage(client.id, client.createdAt);
               const idleLevel = getIdleLevel(daysIdle);
               const idleHint = getIdleHint(daysIdle);
@@ -332,12 +361,26 @@ export function Dashboard() {
                       </div>
                     )}
 
-                    {/* Pipeline Progress — Automatic */}
+                    {/* Pipeline Progress — Manual control */}
                     <div className="client-pipeline">
                       <div className="client-stage">
-                        <span className="client-stage-badge badge badge-primary" style={{ fontSize: '13px' }}>
-                          {stage?.emoji} {stage?.label}
-                        </span>
+                        <div className="client-stage-nav">
+                          <button
+                            className="client-stage-nav-btn"
+                            onClick={(e) => handleStageChange(e, client.id, 'prev')}
+                            disabled={index === 0}
+                            title="Предыдущий этап"
+                          >‹</button>
+                          <span className="client-stage-badge badge badge-primary">
+                            {stage?.emoji} {stage?.label}
+                          </span>
+                          <button
+                            className="client-stage-nav-btn"
+                            onClick={(e) => handleStageChange(e, client.id, 'next')}
+                            disabled={index === total - 1}
+                            title="Следующий этап"
+                          >›</button>
+                        </div>
                         <span className="client-stage-counter">
                           Этап {index} из {total - 1}
                         </span>
@@ -359,6 +402,17 @@ export function Dashboard() {
                         ))}
                       </div>
                     </div>
+
+                    {/* AI Recommendation */}
+                    {hasRecommendation && recStage && (
+                      <div
+                        className="client-recommendation"
+                        onClick={(e) => acceptRecommendation(e, client.id, rec.computedStage as PipelineStage)}
+                        title="Нажмите, чтобы принять рекомендацию"
+                      >
+                        💡 Рекомендация: {recStage.emoji} {recStage.label} (этап {recIndex})
+                      </div>
+                    )}
 
                     {/* Idle Warning */}
                     {idleLevel !== 'ok' && daysIdle > 0 && (

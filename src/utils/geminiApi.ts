@@ -369,5 +369,56 @@ export async function fetchOpenAIWithSchema<T>(
     }
   }
 
-  throw new Error('Непредвиденная цепочка ошибок при генерации.');
+  throw new Error('Непредвиденная цепочка ошибок при генерации с OpenAI.');
+}
+
+/**
+ * Простая генерация текста (без схемы Zod) для OpenAI
+ */
+export async function fetchOpenAICompletion(
+  messages: any[],
+  temperature = 0.7,
+  model = 'gpt-4o-mini'
+): Promise<string> {
+  const maxRetries = 2;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const openAiMessages = messages.map(msg => {
+      if (msg.role === 'user' && Array.isArray(msg.content)) {
+        const parts = msg.content.map((part: any) => {
+          if (part.type === 'text') return { type: 'text', text: part.text };
+          if (part.type === 'image_url') return { type: 'image_url', image_url: { url: part.image_url.url } };
+          return part;
+        });
+        return { role: 'user', content: parts };
+      }
+      return msg;
+    });
+
+    const body = {
+      model: model,
+      messages: openAiMessages,
+      temperature: temperature,
+    };
+
+    try {
+      const response = await fetch('/api/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || data.error || 'Ошибка OpenAI API');
+      }
+
+      return data.choices[0].message.content;
+    } catch (error: any) {
+      if (attempt === maxRetries) throw new Error(`Ошибка сети OpenAI: ${error.message}`);
+      await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+    }
+  }
+  
+  throw new Error('Непредвиденная ошибка OpenAI Completion');
 }

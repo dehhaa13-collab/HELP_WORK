@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import { useState } from 'react';
 import { useToastStore } from '../../../store';
-import { fetchGeminiCompletion, fetchGeminiWithSchema } from '../../../utils/geminiApi';
+import { fetchGeminiCompletion, fetchGeminiWithSchema, fetchOpenAIWithSchema, fetchOpenAICompletion } from '../../../utils/geminiApi';
 import { usePersistedState } from '../../../utils/usePersistedState';
 import { exportScriptsToWord } from '../../../utils/exportUtils';
 import { logActivity } from '../../../utils/activityLogger';
@@ -79,6 +79,7 @@ export function ScenariosTab({ clientId }: Props) {
   const [, setTargetItems] = usePersistedState<TargetItem[]>(`hw_targeting_${clientId}`, []);
   
   // AI Options
+  const [aiProvider, setAiProvider] = usePersistedState<'gemini' | 'openai'>(`hw_ai_provider_${clientId}`, 'gemini');
   const [aiTone, setAiTone] = usePersistedState(`hw_ai_tone_${clientId}`, 'expert');
   const [aiFormat, setAiFormat] = usePersistedState(`hw_ai_format_${clientId}`, 'talking_head');
 
@@ -99,17 +100,26 @@ export function ScenariosTab({ clientId }: Props) {
         ? `Ниша: "${clientNiche}". ${competitors.trim() ? 'Никнеймы: ' + competitors : ''}\n\nПроанализируй успешных конкурентов и тренды в этой нише Instagram. Опиши: какие топики заходят, какой формат Reels популярен, какие хуки цепляют.`
         : `Вот конкуренты: "${competitors}".\n\nПроанализируй их контент и выдели: какие темы заходят, какие форматы популярны, какие хуки используют.`;
 
-      const responseText = await fetchGeminiCompletion(
-        [
-          { role: 'system', content: 'Ты аналитик Instagram-контента. Делаешь детальный разбор конкурентов в указанной нише.' },
-          { role: 'user', content: prompt }
-        ],
-        0.5,
-        'gemini-2.5-flash',
-        'text/plain',
-        undefined,
-        true // Включаем Глубокий Поиск
-      );
+      const responseText = aiProvider === 'openai' 
+        ? await fetchOpenAICompletion(
+            [
+              { role: 'system', content: 'Ты аналитик Instagram-контента. Делаешь детальный разбор конкурентов в указанной нише.' },
+              { role: 'user', content: prompt }
+            ],
+            0.5,
+            'gpt-4o-mini'
+          )
+        : await fetchGeminiCompletion(
+            [
+              { role: 'system', content: 'Ты аналитик Instagram-контента. Делаешь детальный разбор конкурентов в указанной нише.' },
+              { role: 'user', content: prompt }
+            ],
+            0.5,
+            'gemini-2.5-flash',
+            'text/plain',
+            undefined,
+            true // Включаем Глубокий Поиск
+          );
       
       setCompetitors(responseText.trim());
       addToast('success', 'Анализ завершен', 'ИИ просканировал тренды в сети.');
@@ -144,22 +154,22 @@ ${selectedCount > 0 ? `\nУже выбранные темы (НЕ ПОВТОРЯ
   { "id": 2, "title": "Название темы 2" }
 ]`;
 
-      const generatedTopics = await fetchGeminiWithSchema(
-        [
-          { 
-            role: 'system', 
-            content: `Ты элитный Instagram-маркетолог. Твоя задача — придумывать названия для Reels.
+      const apiMessages = [
+        { 
+          role: 'system', 
+          content: `Ты элитный Instagram-маркетолог. Твоя задача — придумывать названия для Reels.
 ПРИМЕРЫ ХОРОШИХ НАЗВАНИЙ (как эталон стиля):
 1. "Чому у вас випадає волосся, навіть якщо догляд дорогий"
 2. "3 помилки, які посилюють випадіння волосся"
 3. "Коли ще не пізно зупинити випадіння: тест"
 Пиши на языке, указанном в нише клиента. Выдаешь строго JSON-массив.`
-          },
-          { role: 'user', content: prompt }
-        ],
-        TopicsArraySchema,
-        0.7
-      );
+        },
+        { role: 'user', content: prompt }
+      ];
+
+      const generatedTopics = aiProvider === 'openai'
+        ? await fetchOpenAIWithSchema(apiMessages, TopicsArraySchema, 0.7)
+        : await fetchGeminiWithSchema(apiMessages, TopicsArraySchema, 0.7);
 
       const formatted = generatedTopics.slice(0, needed).map((t, i) => ({
         id: Date.now() + i,
@@ -209,14 +219,14 @@ ${selectedTopics.map(t => `- ${t.title}`).join('\n')}
 ВЕРНИ ТОЛЬКО ВАЛИДНЫЙ JSON-МАССИВ:
 [{ "id": 1, "title": "Название" }]`;
 
-      const generatedTopics = await fetchGeminiWithSchema(
-        [
-          { role: 'system', content: 'Ты элитный Instagram-маркетолог. Выдаешь строго JSON-массив уникальных тем.' },
-          { role: 'user', content: prompt }
-        ],
-        TopicsArraySchema,
-        0.8
-      );
+      const apiMessages = [
+        { role: 'system', content: 'Ты элитный Instagram-маркетолог. Выдаешь строго JSON-массив уникальных тем.' },
+        { role: 'user', content: prompt }
+      ];
+
+      const generatedTopics = aiProvider === 'openai'
+        ? await fetchOpenAIWithSchema(apiMessages, TopicsArraySchema, 0.8)
+        : await fetchGeminiWithSchema(apiMessages, TopicsArraySchema, 0.8);
 
       const formatted = generatedTopics.slice(0, unselectedCount).map((t, i) => ({
         id: Date.now() + i,
@@ -323,11 +333,10 @@ CTA: Щоб обрати свій комплекс - пиши у дірект.
 3. Обязательно давай четкий CTA (кодовое слово в Директ или ссылка на актуальное).
 4. Пиши на том же языке, на котором написана Ниша (украинский/русский).`;
 
-      const generated = await fetchGeminiWithSchema(
-        [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }],
-        ScriptsArraySchema,
-        0.7
-      );
+      const apiMessages = [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }];
+      const generated = aiProvider === 'openai'
+        ? await fetchOpenAIWithSchema(apiMessages, ScriptsArraySchema, 0.7)
+        : await fetchGeminiWithSchema(apiMessages, ScriptsArraySchema, 0.7);
 
       if (generated.length === 0) throw new Error('Empty array');
 
@@ -459,12 +468,13 @@ ${selectedTitles}
 Тон: ${toneMap[aiTone] || 'Естественный'}. Формат: ${formatMap[aiFormat] || 'Любой'}.
 ВЕРНИ JSON-МАССИВ: [{ "topicTitle": "...", "hook": "...", "visuals": "...", "body": "...", "cta": "...", "music": "...", "duration": "..." }]`;
 
-      const generated = await fetchGeminiWithSchema(
-        [{ role: 'system', content: 'Ты сценарист Reels. Пиши живо, без академизма. JSON-массив.' },
-         { role: 'user', content: prompt }],
-        ScriptsArraySchema,
-        0.9 // Повышенная температура для разнообразия
-      );
+      const apiMessages = [
+        { role: 'system', content: 'Ты сценарист Reels. Пиши живо, без академизма. JSON-массив.' },
+        { role: 'user', content: prompt }
+      ];
+      const generated = aiProvider === 'openai'
+        ? await fetchOpenAIWithSchema(apiMessages, ScriptsArraySchema, 0.9)
+        : await fetchGeminiWithSchema(apiMessages, ScriptsArraySchema, 0.9);
 
       const newScripts = generated.slice(0, topicsForRegen.length).map((s, i) => ({
         id: Date.now() + i,
@@ -566,17 +576,34 @@ ${selectedTitles}
             onChange={(e) => setCompetitors(e.target.value)}
             rows={4}
           />
-          <button 
-            className={`btn btn-secondary mt-2 ${isGeneratingCompetitors ? 'btn-magic' : ''}`}
-            onClick={handleAICompetitors}
-            disabled={isGeneratingCompetitors}
-          >
-            {isGeneratingCompetitors ? '🌐 Сканирую интернет...' : '🌐 Найти их в интернете (Smart Search)'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+            <button 
+              className={`btn btn-secondary ${isGeneratingCompetitors ? 'btn-magic' : ''}`}
+              onClick={handleAICompetitors}
+              disabled={isGeneratingCompetitors}
+            >
+              {isGeneratingCompetitors ? '🌐 Сканирую интернет...' : '🌐 Найти их в интернете (Smart Search)'}
+            </button>
+            <div className="ai-provider-toggle-wrap" style={{ margin: 0 }}>
+              <div className="provider-toggle-styled" onClick={() => setAiProvider(p => p === 'gemini' ? 'openai' : 'gemini')}>
+                <div className={`pt-label pt-free ${aiProvider !== 'gemini' ? 'dimmed' : ''}`}>
+                  <span>Бесплатно</span>
+                  Gemini
+                </div>
+                <div className={`pt-switch ${aiProvider === 'openai' ? 'active' : ''}`}>
+                  <div className="pt-dot"></div>
+                </div>
+                <div className={`pt-label pt-paid ${aiProvider !== 'openai' ? 'dimmed' : ''}`}>
+                  OpenAI
+                  <span>Платно</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={() => setActiveSection('topics')}>
+      <button className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: '1rem' }} onClick={() => setActiveSection('topics')}>
         Далее → Темы 💡
       </button>
         </>
@@ -594,7 +621,22 @@ ${selectedTitles}
                 {topics.length > 0 && <> Выбрано: <b>{selectedTopicsCount}</b> из {topics.length}</>}
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div className="ai-provider-toggle-wrap" style={{ margin: 0 }}>
+                <div className="provider-toggle-styled" onClick={() => setAiProvider(p => p === 'gemini' ? 'openai' : 'gemini')}>
+                  <div className={`pt-label pt-free ${aiProvider !== 'gemini' ? 'dimmed' : ''}`}>
+                    <span>Бесплатно</span>
+                    Gemini
+                  </div>
+                  <div className={`pt-switch ${aiProvider === 'openai' ? 'active' : ''}`}>
+                    <div className="pt-dot"></div>
+                  </div>
+                  <div className={`pt-label pt-paid ${aiProvider !== 'openai' ? 'dimmed' : ''}`}>
+                    OpenAI
+                    <span>Платно</span>
+                  </div>
+                </div>
+              </div>
               {unselectedTopicsCount > 0 && selectedTopicsCount > 0 && (
                 <button 
                   className="btn btn-secondary btn-sm" 
@@ -700,16 +742,34 @@ ${selectedTitles}
             </div>
           </div>
 
-          <button 
-            className={`btn btn-primary btn-lg mt-3 ${isGeneratingScripts ? 'btn-magic' : ''}`}
-            style={{ width: '100%' }}
-            onClick={() => handleGenerateScripts()}
-            disabled={isGeneratingScripts}
-          >
-            {isGeneratingScripts 
-              ? '✨ AI пишет сценарии...' 
-              : `✍️ Сгенерировать сценарии для ${selectedTopicsCount} тем`}
-          </button>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1rem' }}>
+            <div className="ai-provider-toggle-wrap" style={{ margin: 0, flexShrink: 0 }}>
+              <div className="provider-toggle-styled" onClick={() => setAiProvider(p => p === 'gemini' ? 'openai' : 'gemini')}>
+                <div className={`pt-label pt-free ${aiProvider !== 'gemini' ? 'dimmed' : ''}`}>
+                  <span>Бесплатно</span>
+                  Gemini
+                </div>
+                <div className={`pt-switch ${aiProvider === 'openai' ? 'active' : ''}`}>
+                  <div className="pt-dot"></div>
+                </div>
+                <div className={`pt-label pt-paid ${aiProvider !== 'openai' ? 'dimmed' : ''}`}>
+                  OpenAI
+                  <span>Платно</span>
+                </div>
+              </div>
+            </div>
+            
+            <button 
+              className={`btn btn-primary btn-lg ${isGeneratingScripts ? 'btn-magic' : ''}`}
+              style={{ width: '100%' }}
+              onClick={() => handleGenerateScripts()}
+              disabled={isGeneratingScripts}
+            >
+              {isGeneratingScripts 
+                ? '✨ AI пишет сценарии...' 
+                : `✍️ Сгенерировать сценарии для ${selectedTopicsCount} тем`}
+            </button>
+          </div>
         </div>
       </div>
 

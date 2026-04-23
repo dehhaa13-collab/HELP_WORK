@@ -289,6 +289,41 @@ export async function fetchGeminiWithSchema<T>(
 /**
  * Функция для работы с OpenAI API через наш прокси /api/openai
  */
+/**
+ * Рекурсивно патчит JSON-схему для OpenAI Structured Outputs:
+ * - Добавляет additionalProperties: false на каждый объект
+ * - Делает все свойства required (OpenAI strict mode не поддерживает optional)
+ */
+function patchSchemaForOpenAI(schema: any): any {
+  if (!schema || typeof schema !== 'object') return schema;
+
+  const patched = { ...schema };
+
+  // Убираем OpenAPI-специфичные поля, которые OpenAI не понимает
+  delete patched.$schema;
+  delete patched.$ref;
+
+  if (patched.type === 'object' && patched.properties) {
+    patched.additionalProperties = false;
+    // Все ключи должны быть required
+    patched.required = Object.keys(patched.properties);
+    // Рекурсия по свойствам
+    for (const key of Object.keys(patched.properties)) {
+      patched.properties[key] = patchSchemaForOpenAI(patched.properties[key]);
+    }
+  }
+
+  if (patched.type === 'array' && patched.items) {
+    patched.items = patchSchemaForOpenAI(patched.items);
+  }
+
+  // anyOf / oneOf — рекурсия
+  if (patched.anyOf) patched.anyOf = patched.anyOf.map(patchSchemaForOpenAI);
+  if (patched.oneOf) patched.oneOf = patched.oneOf.map(patchSchemaForOpenAI);
+
+  return patched;
+}
+
 export async function fetchOpenAIWithSchema<T>(
   messages: any[],
   schema: z.ZodType<T>,
@@ -296,7 +331,8 @@ export async function fetchOpenAIWithSchema<T>(
   model = 'gpt-4o-mini' // или gpt-4o
 ): Promise<T> {
   const maxRetries = 2;
-  const jsonSchema = zodToJsonSchema(schema as any, { target: 'openApi3' });
+  const rawSchema = zodToJsonSchema(schema as any, { target: 'openApi3' });
+  const jsonSchema = patchSchemaForOpenAI(rawSchema);
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     // Подготовка payload для OpenAI

@@ -155,8 +155,8 @@
   /* Main fills full width */
   .workspace-main {
     margin-left: 0;
-    /* Leave space for mobile header (56px) and bottom nav (60px + safe area) */
-    padding-top: 56px;
+    /* Leave space for mobile header (56px + safe area) and bottom nav (60px + safe area) */
+    padding-top: calc(56px + env(safe-area-inset-top, 0px));
     padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
   }
 
@@ -170,8 +170,10 @@
     left: 0;
     right: 0;
     z-index: 100;
-    height: 56px;
+    /* Height = safe area + content area */
+    height: calc(56px + env(safe-area-inset-top, 0px));
     padding: 0 var(--space-4);
+    /* Push content below the notch/Dynamic Island */
     padding-top: env(safe-area-inset-top, 0px);
     background-color: var(--color-sidebar-bg);
     color: #FFFFFF;

@@ -584,20 +584,38 @@ ${selectedTitles}
             >
               {isGeneratingCompetitors ? '🌐 Сканирую интернет...' : '🌐 Найти их в интернете (Smart Search)'}
             </button>
-            <div className="ai-provider-toggle-wrap" style={{ margin: 0 }}>
-              <div className="provider-toggle-styled" onClick={() => setAiProvider(p => p === 'gemini' ? 'openai' : 'gemini')}>
-                <div className={`pt-label pt-free ${aiProvider !== 'gemini' ? 'dimmed' : ''}`}>
-                  <span>Бесплатно</span>
-                  Gemini
-                </div>
-                <div className={`pt-switch ${aiProvider === 'openai' ? 'active' : ''}`}>
-                  <div className="pt-dot"></div>
-                </div>
-                <div className={`pt-label pt-paid ${aiProvider !== 'openai' ? 'dimmed' : ''}`}>
-                  OpenAI
-                  <span>Платно</span>
-                </div>
-              </div>
+            <div style={{ display: 'inline-flex', borderRadius: '10px', border: '1px solid var(--color-border)', overflow: 'hidden', fontSize: '13px', flexShrink: 0 }}>
+              <button
+                onClick={() => setAiProvider('gemini')}
+                style={{
+                  padding: '6px 14px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontFamily: 'inherit',
+                  transition: 'all 0.15s',
+                  background: aiProvider === 'gemini' ? 'linear-gradient(135deg, #10b981, #34d399)' : 'var(--color-surface)',
+                  color: aiProvider === 'gemini' ? '#fff' : 'var(--color-text-muted)',
+                }}
+              >
+                🟢 Gemini
+              </button>
+              <button
+                onClick={() => setAiProvider('openai')}
+                style={{
+                  padding: '6px 14px',
+                  border: 'none',
+                  borderLeft: '1px solid var(--color-border)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontFamily: 'inherit',
+                  transition: 'all 0.15s',
+                  background: aiProvider === 'openai' ? 'linear-gradient(135deg, #0ea5e9, #38bdf8)' : 'var(--color-surface)',
+                  color: aiProvider === 'openai' ? '#fff' : 'var(--color-text-muted)',
+                }}
+              >
+                ⚡ OpenAI
+              </button>
             </div>
           </div>
         </div>
@@ -622,20 +640,38 @@ ${selectedTitles}
               </p>
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <div className="ai-provider-toggle-wrap" style={{ margin: 0 }}>
-                <div className="provider-toggle-styled" onClick={() => setAiProvider(p => p === 'gemini' ? 'openai' : 'gemini')}>
-                  <div className={`pt-label pt-free ${aiProvider !== 'gemini' ? 'dimmed' : ''}`}>
-                    <span>Бесплатно</span>
-                    Gemini
-                  </div>
-                  <div className={`pt-switch ${aiProvider === 'openai' ? 'active' : ''}`}>
-                    <div className="pt-dot"></div>
-                  </div>
-                  <div className={`pt-label pt-paid ${aiProvider !== 'openai' ? 'dimmed' : ''}`}>
-                    OpenAI
-                    <span>Платно</span>
-                  </div>
-                </div>
+              <div style={{ display: 'inline-flex', borderRadius: '10px', border: '1px solid var(--color-border)', overflow: 'hidden', fontSize: '13px', flexShrink: 0 }}>
+                <button
+                  onClick={() => setAiProvider('gemini')}
+                  style={{
+                    padding: '6px 14px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontFamily: 'inherit',
+                    transition: 'all 0.15s',
+                    background: aiProvider === 'gemini' ? 'linear-gradient(135deg, #10b981, #34d399)' : 'var(--color-surface)',
+                    color: aiProvider === 'gemini' ? '#fff' : 'var(--color-text-muted)',
+                  }}
+                >
+                  🟢 Gemini
+                </button>
+                <button
+                  onClick={() => setAiProvider('openai')}
+                  style={{
+                    padding: '6px 14px',
+                    border: 'none',
+                    borderLeft: '1px solid var(--color-border)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontFamily: 'inherit',
+                    transition: 'all 0.15s',
+                    background: aiProvider === 'openai' ? 'linear-gradient(135deg, #0ea5e9, #38bdf8)' : 'var(--color-surface)',
+                    color: aiProvider === 'openai' ? '#fff' : 'var(--color-text-muted)',
+                  }}
+                >
+                  ⚡ OpenAI
+                </button>
               </div>
               {unselectedTopicsCount > 0 && selectedTopicsCount > 0 && (
                 <button 
@@ -743,20 +779,38 @@ ${selectedTitles}
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1rem' }}>
-            <div className="ai-provider-toggle-wrap" style={{ margin: 0, flexShrink: 0 }}>
-              <div className="provider-toggle-styled" onClick={() => setAiProvider(p => p === 'gemini' ? 'openai' : 'gemini')}>
-                <div className={`pt-label pt-free ${aiProvider !== 'gemini' ? 'dimmed' : ''}`}>
-                  <span>Бесплатно</span>
-                  Gemini
-                </div>
-                <div className={`pt-switch ${aiProvider === 'openai' ? 'active' : ''}`}>
-                  <div className="pt-dot"></div>
-                </div>
-                <div className={`pt-label pt-paid ${aiProvider !== 'openai' ? 'dimmed' : ''}`}>
-                  OpenAI
-                  <span>Платно</span>
-                </div>
-              </div>
+            <div style={{ display: 'inline-flex', borderRadius: '10px', border: '1px solid var(--color-border)', overflow: 'hidden', fontSize: '13px', flexShrink: 0 }}>
+              <button
+                onClick={() => setAiProvider('gemini')}
+                style={{
+                  padding: '6px 14px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontFamily: 'inherit',
+                  transition: 'all 0.15s',
+                  background: aiProvider === 'gemini' ? 'linear-gradient(135deg, #10b981, #34d399)' : 'var(--color-surface)',
+                  color: aiProvider === 'gemini' ? '#fff' : 'var(--color-text-muted)',
+                }}
+              >
+                🟢 Gemini
+              </button>
+              <button
+                onClick={() => setAiProvider('openai')}
+                style={{
+                  padding: '6px 14px',
+                  border: 'none',
+                  borderLeft: '1px solid var(--color-border)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontFamily: 'inherit',
+                  transition: 'all 0.15s',
+                  background: aiProvider === 'openai' ? 'linear-gradient(135deg, #0ea5e9, #38bdf8)' : 'var(--color-surface)',
+                  color: aiProvider === 'openai' ? '#fff' : 'var(--color-text-muted)',
+                }}
+              >
+                ⚡ OpenAI
+              </button>
             </div>
             
             <button 

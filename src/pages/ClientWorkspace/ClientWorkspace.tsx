@@ -7,7 +7,8 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { useClientStore } from '../../store';
 import { useClients } from '../../hooks/useClients';
 import { PIPELINE_STAGES } from '../../types';
-import { computeClientStage } from '../../utils/computeStage';
+
+
 import { ErrorBoundary } from '../../components/ErrorBoundary/ErrorBoundary';
 import './ClientWorkspace.css';
 
@@ -88,10 +89,8 @@ export function ClientWorkspace() {
   const stageInfo = PIPELINE_STAGES.find((s) => s.key === manualStageKey);
   const stageIndex = PIPELINE_STAGES.findIndex((s) => s.key === manualStageKey);
 
-  // Computed stage (recommendation)
-  const computedStage = computeClientStage(client.id, client.workspaceData);
-  const hasRecommendation = computedStage !== manualStageKey;
-  const recStageInfo = hasRecommendation ? PIPELINE_STAGES.find((s) => s.key === computedStage) : null;
+
+
 
   const renderTab = () => {
     switch (activeTab) {

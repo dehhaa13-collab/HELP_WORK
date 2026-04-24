@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { PipelineStage } from '../../types';
 import { useAuthStore, useClientStore, useToastStore } from '../../store';
 import { useClients, useAddClient, useUpdateClient, useRemoveClient } from '../../hooks/useClients';
 import { PIPELINE_STAGES } from '../../types';
 import type { Client } from '../../types';
-import { computeClientStage } from '../../utils/computeStage';
+
 import { trackStageChange, getDaysOnCurrentStage, getIdleLevel, getIdleHint } from '../../utils/stageTracker';
 import { logActivity } from '../../utils/activityLogger';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
@@ -263,7 +263,7 @@ export function Dashboard() {
           </div>
         ) : (
           <div className="client-grid">
-            {clients.map((client, idx) => {
+            {clients.map((client) => {
               // Manual stage (user-controlled)
               const manualStageKey = client.pipelineStage || 'new';
               const stage = PIPELINE_STAGES.find(s => s.key === manualStageKey);

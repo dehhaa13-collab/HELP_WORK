@@ -403,16 +403,7 @@ export function Dashboard() {
                       </div>
                     </div>
 
-                    {/* AI Recommendation (Temporarily hidden) */}
-                    {/* hasRecommendation && recStage && (
-                      <div
-                        className="client-recommendation"
-                        onClick={(e) => acceptRecommendation(e, client.id, rec.computedStage as PipelineStage)}
-                        title="Нажмите, чтобы принять рекомендацию"
-                      >
-                        💡 Рекомендация: {recStage.emoji} {recStage.label} (этап {recIndex})
-                      </div>
-                    ) */}
+                    {/* AI Recommendation — hidden */}
 
                     {/* Idle Warning */}
                     {idleLevel !== 'ok' && daysIdle > 0 && (

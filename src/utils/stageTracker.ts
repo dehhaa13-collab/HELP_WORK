@@ -1,80 +1,61 @@
 /* ============================================
    Stage Tracker — Отслеживание времени на этапе
-   Хранит timestamp последней смены этапа для каждого
-   клиента и вычисляет "застой" (idle days).
+   CLOUD-SYNCED: Хранит timestamp последней смены
+   этапа внутри workspaceData клиента (Supabase).
+   Работает одинаково на всех устройствах.
    ============================================ */
 
 import type { PipelineStage } from '../types';
 
-interface StageRecord {
+/**
+ * Запись о текущем этапе клиента.
+ * Хранится в workspaceData под ключом `hw_stage_record_{clientId}`
+ * через usePersistedState → автоматически синхронизируется в Supabase.
+ */
+export interface StageRecord {
   stage: PipelineStage;
   changedAt: string; // ISO date
 }
 
-const STORAGE_PREFIX = 'hw_stage_record_';
+export const DEFAULT_STAGE_RECORD: StageRecord = {
+  stage: 'new',
+  changedAt: new Date().toISOString(),
+};
 
 /**
- * Обновляет запись об этапе клиента.
- * Если этап изменился — обновляет timestamp.
- * Если этап тот же — ничего не делает.
- * Если записи нет — создаёт с текущей датой.
+ * Вычисляет обновлённый StageRecord если этап изменился.
+ * Возвращает null если обновление не требуется.
+ *
+ * Используется в useEffect: если вернулся не null → вызвать setter.
  */
-export function trackStageChange(clientId: string, currentStage: PipelineStage): void {
-  const key = `${STORAGE_PREFIX}${clientId}`;
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      const record: StageRecord = JSON.parse(raw);
-      if (record.stage !== currentStage) {
-        // Этап изменился — обновляем время
-        const newRecord: StageRecord = {
-          stage: currentStage,
-          changedAt: new Date().toISOString(),
-        };
-        localStorage.setItem(key, JSON.stringify(newRecord));
-      }
-      // Если этап тот же — не трогаем timestamp
-    } else {
-      // Первая запись — создаём с текущей датой
-      const newRecord: StageRecord = {
-        stage: currentStage,
-        changedAt: new Date().toISOString(),
-      };
-      localStorage.setItem(key, JSON.stringify(newRecord));
-    }
-  } catch {
-    // Fallback: создаём новую запись
-    const newRecord: StageRecord = {
-      stage: currentStage,
-      changedAt: new Date().toISOString(),
-    };
-    localStorage.setItem(key, JSON.stringify(newRecord));
-  }
+export function getUpdatedStageRecord(
+  current: StageRecord,
+  newStage: PipelineStage
+): StageRecord | null {
+  if (current.stage === newStage) return null;
+
+  return {
+    stage: newStage,
+    changedAt: new Date().toISOString(),
+  };
 }
 
 /**
  * Возвращает количество дней, прошедших с момента последней смены этапа.
  * Если записи нет — использует fallback дату (createdAt клиента).
  */
-export function getDaysOnCurrentStage(clientId: string, fallbackDate?: string): number {
-  const key = `${STORAGE_PREFIX}${clientId}`;
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      const record: StageRecord = JSON.parse(raw);
-      const changedAt = new Date(record.changedAt);
-      const now = new Date();
-      const diff = now.getTime() - changedAt.getTime();
-      return Math.floor(diff / (1000 * 60 * 60 * 24));
-    }
-  } catch {
-    // ignore
+export function getDaysOnCurrentStage(record: StageRecord | null, fallbackDate?: string): number {
+  const now = new Date();
+
+  if (record && record.changedAt) {
+    const changedAt = new Date(record.changedAt);
+    const diff = now.getTime() - changedAt.getTime();
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
   }
 
   // Fallback: использовать дату создания клиента
   if (fallbackDate) {
     const created = new Date(fallbackDate);
-    const now = new Date();
     const diff = now.getTime() - created.getTime();
     return Math.floor(diff / (1000 * 60 * 60 * 24));
   }

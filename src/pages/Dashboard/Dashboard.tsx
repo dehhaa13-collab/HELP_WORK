@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { PipelineStage } from '../../types';
 import { useAuthStore, useClientStore, useToastStore } from '../../store';
-import { useClients, useAddClient, useUpdateClient, useRemoveClient } from '../../hooks/useClients';
+import { useClients, useAddClient, useUpdateClient, useRemoveClient, useUpdateWorkspaceData } from '../../hooks/useClients';
 import { PIPELINE_STAGES } from '../../types';
 import type { Client } from '../../types';
 
-import { trackStageChange, getDaysOnCurrentStage, getIdleLevel, getIdleHint } from '../../utils/stageTracker';
+import { getUpdatedStageRecord, getDaysOnCurrentStage, getIdleLevel, getIdleHint } from '../../utils/stageTracker';
+import type { StageRecord } from '../../utils/stageTracker';
 import { logActivity } from '../../utils/activityLogger';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { ActivityLog } from './ActivityLog';
@@ -127,12 +128,28 @@ export function Dashboard() {
 
 
 
-  // Track idle time based on manual stage
+  // Track idle time — cloud synced via workspaceData
+  const updateWorkspaceData = useUpdateWorkspaceData();
   useEffect(() => {
     clients.forEach(client => {
-      trackStageChange(client.id, client.pipelineStage || 'new');
+      const stageKey = `hw_stage_record_${client.id}`;
+      const currentRecord: StageRecord | null = client.workspaceData?.[stageKey] || null;
+      const currentStage = client.pipelineStage || 'new';
+
+      if (!currentRecord) {
+        // Первая запись — создаём
+        updateWorkspaceData(client.id, stageKey, {
+          stage: currentStage,
+          changedAt: new Date().toISOString(),
+        });
+      } else {
+        const updated = getUpdatedStageRecord(currentRecord, currentStage);
+        if (updated) {
+          updateWorkspaceData(client.id, stageKey, updated);
+        }
+      }
     });
-  }, [clients]);
+  }, [clients, updateWorkspaceData]);
 
   // === Manual stage navigation ===
   const handleStageChange = async (e: React.MouseEvent, clientId: string, direction: 'prev' | 'next') => {
@@ -273,8 +290,9 @@ export function Dashboard() {
               const isDone = manualStageKey === 'done';
               const isEditing = editingClientId === client.id;
 
-              // Idle tracking uses manual stage
-              const daysIdle = getDaysOnCurrentStage(client.id, client.createdAt);
+              // Idle tracking — reads cloud-synced stageRecord from workspaceData
+              const stageRecord: StageRecord | null = client.workspaceData?.[`hw_stage_record_${client.id}`] || null;
+              const daysIdle = getDaysOnCurrentStage(stageRecord, client.createdAt);
               const idleLevel = getIdleLevel(daysIdle);
               const idleHint = getIdleHint(daysIdle);
 

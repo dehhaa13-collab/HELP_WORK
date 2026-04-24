@@ -59,58 +59,57 @@ export function DashboardTab({ clientId }: Props) {
   // === Авто-синхронизация статусов Kanban с Монтажом ===
   // Только для ОДОБРЕННЫХ скриптов (approved === true)
   // Одобренный скрипт i → публикация (порядковый номер среди одобренных) в Монтаже
+  // 
+  // NOTE: Используем функциональный updater в setScripts, чтобы всегда
+  // работать с актуальным значением scripts без добавления его в deps
+  // (иначе получаем лишние перерендеры).
   useEffect(() => {
-    if (scripts.length === 0) return;
+    setScripts(currentScripts => {
+      if (currentScripts.length === 0) return currentScripts;
 
-    let changed = false;
-    // Получаем порядок одобренных скриптов
-    const approvedScripts = scripts.filter(s => s.approved);
+      let changed = false;
+      const approvedScripts = currentScripts.filter(s => s.approved);
 
-    const updated = scripts.map((script) => {
-      // Если скрипт не одобрен — всегда 'idea'
-      if (!script.approved) {
-        if (script.status !== 'idea' && script.status !== undefined) {
+      const updated = currentScripts.map((script) => {
+        if (!script.approved) {
+          if (script.status !== 'idea' && script.status !== undefined) {
+            changed = true;
+            return { ...script, status: 'idea' as ScriptStatus };
+          }
+          return script;
+        }
+
+        const approvedIndex = approvedScripts.findIndex(a => a.id === script.id);
+        const editItem = editingItems.find(e => e.id === approvedIndex + 1);
+        let newStatus: ScriptStatus = script.status || 'script';
+
+        if (newStatus === 'idea') newStatus = 'script';
+
+        if (editItem) {
+          if (editItem.deliveredToClient && editItem.editingDone && editItem.coverDone) {
+            newStatus = 'published';
+          } else if (editItem.editingDone) {
+            newStatus = 'editing';
+          } else if (editItem.sourceReceived) {
+            newStatus = 'shooting';
+          }
+        }
+
+        const ORDER: ScriptStatus[] = ['idea', 'script', 'shooting', 'editing', 'published'];
+        const currentRank = ORDER.indexOf(script.status || 'idea');
+        const newRank = ORDER.indexOf(newStatus);
+
+        if (newRank > currentRank) {
           changed = true;
-          return { ...script, status: 'idea' as ScriptStatus };
+          return { ...script, status: newStatus };
         }
+
         return script;
-      }
+      });
 
-      // Скрипт одобрен — синхронизируем с Монтажом
-      const approvedIndex = approvedScripts.findIndex(a => a.id === script.id);
-      const editItem = editingItems.find(e => e.id === approvedIndex + 1);
-      let newStatus: ScriptStatus = script.status || 'script';
-
-      // Минимальный статус для одобренного — 'script'
-      if (newStatus === 'idea') newStatus = 'script';
-
-      if (editItem) {
-        if (editItem.deliveredToClient && editItem.editingDone && editItem.coverDone) {
-          newStatus = 'published';
-        } else if (editItem.editingDone) {
-          newStatus = 'editing';
-        } else if (editItem.sourceReceived) {
-          newStatus = 'shooting';
-        }
-      }
-
-      // Только двигаем вперёд (не назад)
-      const ORDER: ScriptStatus[] = ['idea', 'script', 'shooting', 'editing', 'published'];
-      const currentRank = ORDER.indexOf(script.status || 'idea');
-      const newRank = ORDER.indexOf(newStatus);
-
-      if (newRank > currentRank) {
-        changed = true;
-        return { ...script, status: newStatus };
-      }
-
-      return script;
+      return changed ? updated : currentScripts;
     });
-
-    if (changed) {
-      setScripts(updated);
-    }
-  }, [editingItems, scripts]);
+  }, [editingItems, setScripts]);
 
   const removeScript = (id: number) => {
     setScripts(scripts.filter(s => s.id !== id));

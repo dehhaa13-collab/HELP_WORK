@@ -37,13 +37,19 @@ interface LogEntry {
 
 // Track whether the table exists to avoid repeated 404s
 let tableAvailable: boolean | null = null; // null = unknown
+let lastCheckTime = 0;
+const RECHECK_INTERVAL_MS = 60_000; // Retry every 60s if table was unavailable
 
 /**
  * Log an activity. Fire-and-forget — never throws, never blocks UI.
  */
 export function logActivity(entry: LogEntry): void {
-  // Skip if we already know the table doesn't exist
-  if (tableAvailable === false) return;
+  // Skip if we know the table doesn't exist — but retry periodically
+  if (tableAvailable === false) {
+    if (Date.now() - lastCheckTime < RECHECK_INTERVAL_MS) return;
+    // Reset to unknown to allow retry
+    tableAvailable = null;
+  }
 
   const user = useAuthStore.getState().user;
 
@@ -64,6 +70,7 @@ export function logActivity(entry: LogEntry): void {
         // Table doesn't exist — stop trying (PGRST205 = table not in schema cache)
         if (error.code === 'PGRST205' || error.code === '42P01' || error.message?.includes('Could not find') || error.message?.includes('relation')) {
           tableAvailable = false;
+          lastCheckTime = Date.now();
         }
       } else {
         tableAvailable = true;

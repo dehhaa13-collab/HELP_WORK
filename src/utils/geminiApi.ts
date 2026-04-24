@@ -57,6 +57,12 @@ export const fetchGeminiCompletion = async (
       }
       contents.push({ role: 'user', parts });
     }
+
+    // Gemini uses 'model' for assistant responses
+    if (msg.role === 'model' || msg.role === 'assistant') {
+      const text = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+      contents.push({ role: 'model', parts: [{ text }] });
+    }
   }
 
   const body: any = { contents };

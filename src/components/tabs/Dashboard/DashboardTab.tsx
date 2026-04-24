@@ -165,7 +165,7 @@ export function DashboardTab({ clientId }: Props) {
             <div className="kanban-board">
               {[
                 { id: 'idea', title: '💡 Идеи', desc: 'Ещё не одобрены' },
-                { id: 'script', title: '✅ Одобрены', desc: 'Готовы к съемке' },
+                { id: 'script', title: '✅ Одобрены', desc: 'Ждём исходники' },
                 { id: 'shooting', title: '🎥 В съемке', desc: 'Исходник получен' },
                 { id: 'editing', title: '✂️ Монтаж', desc: 'В работе' },
                 { id: 'published', title: '🎉 Готово', desc: 'Выдано' },
@@ -195,7 +195,10 @@ export function DashboardTab({ clientId }: Props) {
                     }}
                   >
                     <div className="kanban-column-header">
-                      <span>{col.title}</span>
+                      <div>
+                        <span>{col.title}</span>
+                        <div style={{ fontSize: '11px', opacity: 0.6, marginTop: '2px' }}>{col.desc}</div>
+                      </div>
                       <span className="kanban-badge" style={{ background: si.bg, color: si.color }}>{colScripts.length}</span>
                     </div>
                     {colScripts.map(script => (

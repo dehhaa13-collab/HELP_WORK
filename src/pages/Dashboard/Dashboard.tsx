@@ -125,13 +125,7 @@ export function Dashboard() {
     }
   };
 
-  // Computed stages — used as RECOMMENDATIONS only
-  const recommendedStages = useMemo(() => {
-    return clients.map(client => ({
-      clientId: client.id,
-      computedStage: computeClientStage(client.id, client.workspaceData),
-    }));
-  }, [clients]);
+
 
   // Track idle time based on manual stage
   useEffect(() => {
@@ -162,21 +156,6 @@ export function Dashboard() {
     } catch { /* toast already handled */ }
   };
 
-  const acceptRecommendation = async (e: React.MouseEvent, clientId: string, stage: PipelineStage) => {
-    e.stopPropagation();
-    const client = clients.find(c => c.id === clientId);
-    const stageLabel = PIPELINE_STAGES.find(s => s.key === stage)?.label || stage;
-    try {
-      await updateClient({ id: clientId, updates: { pipelineStage: stage } });
-      logActivity({
-        action_type: 'stage_recommendation_accepted',
-        client_id: clientId,
-        client_name: client?.name,
-        details: `Принята рекомендация: ${stageLabel}`,
-      });
-      addToast('success', 'Этап обновлён', `Этап переключён на рекомендованный.`);
-    } catch { /* ignore */ }
-  };
 
   return (
     <div className="dashboard">
@@ -293,12 +272,6 @@ export function Dashboard() {
               const progress = ((index) / (total - 1)) * 100;
               const isDone = manualStageKey === 'done';
               const isEditing = editingClientId === client.id;
-
-              // Recommendation from computed stage
-              const rec = recommendedStages[idx];
-              const hasRecommendation = rec && rec.computedStage !== manualStageKey;
-              const recStage = hasRecommendation ? PIPELINE_STAGES.find(s => s.key === rec.computedStage) : null;
-              const recIndex = hasRecommendation ? PIPELINE_STAGES.findIndex(s => s.key === rec.computedStage) : -1;
 
               // Idle tracking uses manual stage
               const daysIdle = getDaysOnCurrentStage(client.id, client.createdAt);

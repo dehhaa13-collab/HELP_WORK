@@ -136,11 +136,11 @@ export function ClientWorkspace() {
           <div className="sidebar-stage-badge">
             {stageInfo?.emoji} {stageInfo?.label} ({stageIndex}/{PIPELINE_STAGES.length - 1})
           </div>
-          {hasRecommendation && recStageInfo && (
+          {/* hasRecommendation && recStageInfo && (
             <div className="sidebar-recommendation" title="Рекомендация на основе данных">
               💡 {recStageInfo.emoji} {recStageInfo.label}
             </div>
-          )}
+          ) */}
         </div>
 
         <nav className="sidebar-nav">

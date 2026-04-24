@@ -110,7 +110,7 @@ export function DashboardTab({ clientId }: Props) {
     if (changed) {
       setScripts(updated);
     }
-  }, [editingItems]);
+  }, [editingItems, scripts]);
 
   const removeScript = (id: number) => {
     setScripts(scripts.filter(s => s.id !== id));

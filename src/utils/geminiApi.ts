@@ -245,9 +245,12 @@ export async function fetchGeminiWithSchema<T>(
   // Конвертируем Zod в JSON Schema для нативной поддержки Gemini Structured Outputs
   const jsonSchema = zodToJsonSchema(schema as any, { target: 'openApi3' });
 
+  // Clone to avoid mutating the caller's array during retries
+  const msgs = [...messages];
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     // 1. Запрашиваем текст от ИИ с жестко заданным responseSchema
-    const textResponse = await fetchGeminiCompletion(messages, temperature, model, 'application/json', jsonSchema);
+    const textResponse = await fetchGeminiCompletion(msgs, temperature, model, 'application/json', jsonSchema);
 
     let rawJson: any;
     try {
@@ -257,8 +260,8 @@ export async function fetchGeminiWithSchema<T>(
       if (attempt === maxRetries) throw new Error('ИИ не смог выдать структуру JSON даже после 3 попыток.');
       
       // Auto-Correction Prompt
-      messages.push({ role: 'model', content: textResponse });
-      messages.push({ role: 'user', content: 'ОШИБКА: Твой ответ не является валидным JSON-объектом/массивом или ты обернул его неверно. Выведи строго чистый JSON без объяснений!' });
+      msgs.push({ role: 'model', content: textResponse });
+      msgs.push({ role: 'user', content: 'ОШИБКА: Твой ответ не является валидным JSON-объектом/массивом или ты обернул его неверно. Выведи строго чистый JSON без объяснений!' });
       console.warn(`[Gemini Self-Correction] JSON Extract Error (попытка ${attempt + 1}). Просим ИИ исправиться...`);
       continue;
     }
@@ -276,8 +279,8 @@ export async function fetchGeminiWithSchema<T>(
       const errorStr = result.error.issues.map(i => `'${i.path.join('.')}' -> ${i.message}`).join('; ');
       
       // Подсказываем ИИ, что конкретно он сделал не так
-      messages.push({ role: 'model', content: JSON.stringify(rawJson) });
-      messages.push({ role: 'user', content: `ОШИБКА АРХИТЕКТУРЫ: Твой JSON не прошёл проверку схемы. Заполни пропущенные поля или исправь типы: ${errorStr}\nПожалуйста, сгенерируй исправленный JSON-ответ.` });
+      msgs.push({ role: 'model', content: JSON.stringify(rawJson) });
+      msgs.push({ role: 'user', content: `ОШИБКА АРХИТЕКТУРЫ: Твой JSON не прошёл проверку схемы. Заполни пропущенные поля или исправь типы: ${errorStr}\nПожалуйста, сгенерируй исправленный JSON-ответ.` });
       
       console.warn(`[Gemini Self-Correction] Zod Error: ${errorStr} (попытка ${attempt + 1}). Просим ИИ исправиться...`);
     }
@@ -334,9 +337,12 @@ export async function fetchOpenAIWithSchema<T>(
   const rawSchema = zodToJsonSchema(schema as any, { target: 'openApi3' });
   const jsonSchema = patchSchemaForOpenAI(rawSchema);
 
+  // Clone to avoid mutating the caller's array during retries
+  const msgs = [...messages];
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     // Подготовка payload для OpenAI
-    const openAiMessages = messages.map(msg => {
+    const openAiMessages = msgs.map(msg => {
       if (msg.role === 'user' && Array.isArray(msg.content)) {
         const parts = msg.content.map((part: any) => {
           if (part.type === 'text') return { type: 'text', text: part.text };
@@ -387,8 +393,8 @@ export async function fetchOpenAIWithSchema<T>(
       rawJson = extractJsonFromText(textResponse);
     } catch (e: any) {
       if (attempt === maxRetries) throw new Error('OpenAI не смог выдать структуру JSON.');
-      messages.push({ role: 'assistant', content: textResponse });
-      messages.push({ role: 'user', content: 'ОШИБКА: Твой ответ не является валидным JSON-объектом/массивом или ты обернул его неверно. Выведи строго чистый JSON без объяснений!' });
+      msgs.push({ role: 'assistant', content: textResponse });
+      msgs.push({ role: 'user', content: 'ОШИБКА: Твой ответ не является валидным JSON-объектом/массивом или ты обернул его неверно. Выведи строго чистый JSON без объяснений!' });
       continue;
     }
 
@@ -400,8 +406,8 @@ export async function fetchOpenAIWithSchema<T>(
         throw new Error('OpenAI не справился с форматом данных. Попробуйте еще раз.');
       }
       const errorStr = result.error.issues.map(i => `'${i.path.join('.')}' -> ${i.message}`).join('; ');
-      messages.push({ role: 'assistant', content: JSON.stringify(rawJson) });
-      messages.push({ role: 'user', content: `ОШИБКА АРХИТЕКТУРЫ: Твой JSON не прошёл проверку схемы. Заполни пропущенные поля или исправь типы: ${errorStr}\nПожалуйста, сгенерируй исправленный JSON-ответ.` });
+      msgs.push({ role: 'assistant', content: JSON.stringify(rawJson) });
+      msgs.push({ role: 'user', content: `ОШИБКА АРХИТЕКТУРЫ: Твой JSON не прошёл проверку схемы. Заполни пропущенные поля или исправь типы: ${errorStr}\nПожалуйста, сгенерируй исправленный JSON-ответ.` });
     }
   }
 

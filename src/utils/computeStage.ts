@@ -48,7 +48,7 @@ export function computeClientStage(clientId: string, workspaceData?: Record<stri
   // 0→2: Проверяем анализ Instagram
   // Встреча (этап 1) — ручное действие, не вычисляется автоматически.
   // Если анализ не сделан — рекомендуем 'new' (начальный этап)
-  const analysisResult = get<{ aiSummary?: string } | null>(`hw_analysis_${clientId}`, null);
+  const analysisResult = get<{ aiSummary?: string } | null>(`hw_ai_${clientId}`, null);
   const hasAnalysis = analysisResult && analysisResult.aiSummary;
   if (!hasAnalysis) return 'new';
 

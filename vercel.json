@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/((?!assets|favicon|manifest|icons).*)", "destination": "/index.html" }
+    { "source": "/api/supabase/(.*)", "destination": "https://egduscijdjjnxlxphfoe.supabase.co/$1" },
+    { "source": "/((?!assets|favicon|manifest|icons|api).*)", "destination": "/index.html" }
   ],
   "headers": [
     {

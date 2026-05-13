@@ -4,7 +4,10 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-export const SUPABASE_URL = 'https://egduscijdjjnxlxphfoe.supabase.co';
+// Use relative proxy URL in browser to bypass ISP blocks, fallback to direct URL
+export const SUPABASE_URL = typeof window !== 'undefined' 
+  ? `${window.location.origin}/api/supabase` 
+  : 'https://egduscijdjjnxlxphfoe.supabase.co';
 
 const getSupabaseKey = () => {
   // Obfuscated to bypass GitHub secret scanning

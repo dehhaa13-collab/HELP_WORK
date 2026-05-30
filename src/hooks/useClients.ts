@@ -84,6 +84,10 @@ export function useClients() {
   });
 
   useEffect(() => {
+    // Track error retries to prevent infinite loops
+    let errorRetryCount = 0;
+    let errorRetryTimer: ReturnType<typeof setTimeout> | null = null;
+
     // Realtime subscription with error handling
     const channel = supabase
       .channel('clients-changes')
@@ -91,24 +95,40 @@ export function useClients() {
         queryClient.invalidateQueries({ queryKey: ['clients'] });
       })
       .subscribe((status) => {
-        // FIX #2: Handle channel errors (timeout, disconnect)
+        if (status === 'SUBSCRIBED') {
+          // Connection restored — reset retry counter
+          errorRetryCount = 0;
+          console.info('[Realtime] Connected ✓');
+        }
+
+        // Handle channel errors (timeout, disconnect) with exponential backoff
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn(`[Realtime] Channel ${status}, refetching data...`);
-          setTimeout(() => {
-            queryClient.invalidateQueries({ queryKey: ['clients'] });
-          }, 3000);
+          errorRetryCount++;
+          // Exponential backoff: 3s, 6s, 12s, 24s, capped at 60s. Stop after 5 retries.
+          if (errorRetryCount <= 5) {
+            const delay = Math.min(3000 * Math.pow(2, errorRetryCount - 1), 60000);
+            console.warn(`[Realtime] ${status} (attempt ${errorRetryCount}/5). Retry in ${delay / 1000}s`);
+            if (errorRetryTimer) clearTimeout(errorRetryTimer);
+            errorRetryTimer = setTimeout(() => {
+              queryClient.invalidateQueries({ queryKey: ['clients'] });
+            }, delay);
+          } else {
+            console.warn('[Realtime] Max retries reached. Data available via manual refresh.');
+          }
         }
       });
 
-    // FIX #2: Refetch when tab becomes visible (handles laptop sleep/wake)
+    // Refetch when tab becomes visible (handles laptop sleep/wake)
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
+        errorRetryCount = 0; // Reset on visibility change
         queryClient.invalidateQueries({ queryKey: ['clients'] });
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
+      if (errorRetryTimer) clearTimeout(errorRetryTimer);
       supabase.removeChannel(channel);
       document.removeEventListener('visibilitychange', handleVisibility);
     };

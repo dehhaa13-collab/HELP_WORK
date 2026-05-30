@@ -263,7 +263,7 @@ export function Dashboard() {
           <div className="dashboard-empty">
             <div className="dashboard-empty-icon" style={{ filter: 'grayscale(1)', opacity: 0.5 }}>❗</div>
             <h3>Ошибка загрузки</h3>
-            <p>Не удалось получить доступ к базе данных клиентов. Проверьте соединение с интернетом или настройки сети (возможно, Supabase заблокирован вашим провайдером или VPN).</p>
+            <p>Не удалось получить доступ к базе данных клиентов. Проверьте соединение с интернетом или настройки сети (возможно, ваш бесплатный проект Supabase был поставлен на паузу из-за неактивности, либо заблокирован провайдером/VPN).</p>
             <button className="btn btn-secondary btn-lg" onClick={() => window.location.reload()}>Обновить страницу</button>
           </div>
         ) : clients.length === 0 ? (

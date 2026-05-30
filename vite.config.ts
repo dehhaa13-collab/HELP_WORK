@@ -9,8 +9,9 @@ export default defineConfig({
       '/api/supabase': {
         target: 'https://egduscijdjjnxlxphfoe.supabase.co',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/supabase/, '')
-      }
-    }
-  }
+        ws: true, // Critical: proxy WebSocket connections for Supabase Realtime
+        rewrite: (path) => path.replace(/^\/api\/supabase/, ''),
+      },
+    },
+  },
 })

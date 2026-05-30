@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/keep-alive",
+      "schedule": "0 12 * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/api/supabase/(.*)", "destination": "https://egduscijdjjnxlxphfoe.supabase.co/$1" },
     { "source": "/((?!assets|favicon|manifest|icons|api).*)", "destination": "/index.html" }

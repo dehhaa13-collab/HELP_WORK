@@ -73,47 +73,7 @@
   color: var(--color-text-secondary);
 }
 
-/* Checkbox */
-.editing-checkbox {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-}
-
-.editing-checkbox input {
-  display: none;
-}
-
-.editing-checkbox-custom {
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-}
-
-.editing-checkbox input:checked + .editing-checkbox-custom {
-  background-color: var(--color-success);
-  border-color: var(--color-success);
-}
-
-.editing-checkbox input:checked + .editing-checkbox-custom::after {
-  content: '✓';
-  color: #FFFFFF;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.editing-checkbox-label {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-xs);
-}
+/* Checkbox - keeping magic checkbox overrides if any were needed */
 
 /* Publication name in editing table */
 .editing-col-name {
@@ -149,22 +109,11 @@
 
   .editing-table-header,
   .editing-table-row {
-    grid-template-columns: 36px 1.5fr 1fr 1fr 1fr 1fr;
+    grid-template-columns: 36px 160px 85px 85px 85px 85px;
+    gap: var(--space-2);
     padding: var(--space-2) var(--space-3);
     font-size: var(--font-size-xs);
-    min-width: 560px;
-  }
-
-  .editing-checkbox {
-    font-size: var(--font-size-xs);
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .editing-checkbox input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    min-width: 20px;
+    min-width: 620px;
   }
 
   .editing-pub-input {

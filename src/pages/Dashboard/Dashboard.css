@@ -618,40 +618,30 @@
   }
 }
 
-/* === Idle Client Indicators (застой на этапе) === */
-.client-card-idle-warning {
-  border-left: 3px solid #f59e0b;
-  box-shadow: inset 3px 0 0 #f59e0b,
-              0 2px 8px rgba(245, 158, 11, 0.08);
+/* === Idle Client Indicators (Уголок) === */
+.client-idle-corner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 48px 48px 0 0;
+  z-index: 10;
+  transition: border-color 0.3s ease;
+  pointer-events: auto; /* To allow hovering for the title */
 }
 
-.client-card-idle-danger {
-  border-left: 3px solid #ef4444;
-  box-shadow: inset 3px 0 0 #ef4444,
-              0 2px 8px rgba(239, 68, 68, 0.08);
+.client-idle-corner-ok {
+  border-color: rgba(16, 185, 129, 0.7) transparent transparent transparent; /* Green */
 }
 
-.client-idle-badge {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  font-size: 11px;
-  font-weight: 500;
-  width: fit-content;
-  margin-top: var(--space-2);
-  animation: idle-fade-in 0.3s ease;
+.client-idle-corner-warning {
+  border-color: rgba(245, 158, 11, 0.8) transparent transparent transparent; /* Yellow */
 }
 
-.client-idle-badge-warning {
-  background: rgba(245, 158, 11, 0.1);
-  color: #b45309;
-}
-
-.client-idle-badge-danger {
-  background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
+.client-idle-corner-danger {
+  border-color: rgba(239, 68, 68, 0.85) transparent transparent transparent; /* Red */
 }
 
 @keyframes idle-fade-in {

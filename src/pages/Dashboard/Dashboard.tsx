@@ -364,12 +364,16 @@ export function Dashboard() {
               return (
                 <div
                   key={client.id}
-                  className={`client-card card ${isArchived ? 'client-card-archived' : idleLevel !== 'ok' ? `client-card-idle-${idleLevel}` : ''}`}
+                  className={`client-card card ${isArchived ? 'client-card-archived' : ''}`}
                   onClick={() => { if (!isEditing) selectClient(client.id); }}
                   onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !isEditing) { e.preventDefault(); selectClient(client.id); } }}
                   role="button"
                   tabIndex={0}
                 >
+                  <div
+                    className={`client-idle-corner client-idle-corner-${idleLevel}`}
+                    title={idleLevel === 'ok' ? 'Работа идет по плану' : idleHint}
+                  />
                   <div className="client-card-body card-body">
                     {/* Client Info */}
                     <div className="client-card-header">
@@ -471,12 +475,7 @@ export function Dashboard() {
 
                     {/* AI Recommendation — hidden */}
 
-                    {/* Idle Warning */}
-                    {idleLevel !== 'ok' && daysIdle > 0 && (
-                      <div className={`client-idle-badge client-idle-badge-${idleLevel}`}>
-                        {idleLevel === 'danger' ? '🔴' : '🟡'} {idleHint}
-                      </div>
-                    )}
+                    {/* Idle Warning badge removed in favor of corner indicator */}
 
                     {/* Actions */}
                     <div className="client-card-actions">

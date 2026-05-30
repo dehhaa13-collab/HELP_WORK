@@ -320,9 +320,29 @@ export function AiAnalysisTab({ clientId }: Props) {
       {/* Screenshot Upload */}
       <div className="card ai-upload-card">
         <div className="card-body">
-          <h3 className="ai-section-title">📸 Скриншот профиля</h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '8px' }}>
+            <h3 className="ai-section-title" style={{ margin: 0 }}>📸 Скриншот профиля</h3>
+            {!!result.aiSummary && (
+              <span style={{ 
+                backgroundColor: 'rgba(34, 197, 94, 0.1)', 
+                color: '#16a34a', 
+                padding: '4px 10px', 
+                borderRadius: '8px', 
+                fontSize: '12px', 
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Уже проанализировано
+              </span>
+            )}
+          </div>
           <p className="ai-section-desc">
-            Загрузите скриншот Instagram-страницы клиента для AI-анализа.
+            {!!result.aiSummary 
+              ? 'Анализ для этого клиента уже был сделан (результаты сохранены). Загрузите новый скриншот, чтобы обновить анализ.' 
+              : 'Загрузите скриншот Instagram-страницы клиента для AI-анализа.'}
           </p>
 
           <div className="ai-provider-toggle-wrap">

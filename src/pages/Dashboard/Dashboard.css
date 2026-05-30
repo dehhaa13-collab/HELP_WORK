@@ -751,6 +751,7 @@
   /* Tab switcher mobile */
   .dash-tab-switcher {
     padding: var(--space-2) var(--space-3);
+    position: static !important;
   }
 
   .dash-tab-btn {

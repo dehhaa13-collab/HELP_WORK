@@ -255,15 +255,17 @@ export function Dashboard() {
             {/* Archived count badge */}
             {(() => {
               const archivedCount = clients.filter(c => c.workspaceData?.[`hw_archived_${c.id}`]).length;
-              return archivedCount > 0 ? (
+              if (archivedCount === 0 && !showArchived) return null;
+              
+              return (
                 <button
                   className={`archived-toggle-btn ${showArchived ? 'archived-toggle-btn-active' : ''}`}
                   onClick={() => setShowArchived(v => !v)}
-                  title={showArchived ? 'Скрыть завершённых' : 'Показать завершённых'}
+                  title={showArchived ? 'Вернуться к активным клиентам' : 'Показать завершённых'}
                 >
-                  {showArchived ? '👁️' : '🗃️'} {archivedCount} завершён{archivedCount === 1 ? '' : archivedCount >= 2 && archivedCount <= 4 ? 'о' : 'о'}
+                  {showArchived ? '👁️ К активным' : `🗃️ ${archivedCount} завершён${archivedCount % 10 === 1 && archivedCount % 100 !== 11 ? '' : 'о'}`}
                 </button>
-              ) : null;
+              );
             })()}
           </div>
           <div className="dashboard-toolbar-right">

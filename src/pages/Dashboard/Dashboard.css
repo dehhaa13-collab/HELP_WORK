@@ -311,16 +311,15 @@
 /* Archive toggle circle button */
 .archive-toggle {
   opacity: 0;
-  font-size: 16px;
-  line-height: 1;
-  color: var(--color-text-muted);
-  transition: opacity var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
-  width: 28px;
-  height: 28px;
+  transition: opacity var(--transition-fast), transform var(--transition-fast), background-color var(--transition-fast);
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
 }
 
 .client-card:hover .archive-toggle {
@@ -328,13 +327,30 @@
 }
 
 .archive-toggle:hover {
-  color: #16a34a;
-  transform: scale(1.15);
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: scale(1.1);
 }
 
 .archive-toggle-active {
   opacity: 1 !important;
-  color: #16a34a;
+}
+
+.status-circle {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.status-circle-active {
+  background-color: #22c55e; /* green */
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+
+.status-circle-inactive {
+  background-color: #ef4444; /* red */
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
 }
 
 /* Archived card state — greyed out */
@@ -684,9 +700,29 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* On touch devices, delete button is always visible */
-  .client-delete {
+  /* On touch devices, action buttons are always visible and larger for touch */
+  .client-delete,
+  .archive-toggle {
     opacity: 1;
+  }
+
+  .archive-toggle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .status-circle {
+    width: 16px;
+    height: 16px;
+  }
+
+  .client-delete {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* Card should not hover-transform on mobile (feels janky on touch) */

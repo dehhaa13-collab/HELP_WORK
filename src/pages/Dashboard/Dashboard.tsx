@@ -396,7 +396,7 @@ export function Dashboard() {
                           onClick={(e) => handleToggleArchived(e, client)}
                           title={isArchived ? 'Возобновить работу' : 'Отметить как завершённого'}
                         >
-                          {isArchived ? '✅' : '○'}
+                          <div className={`status-circle ${isArchived ? 'status-circle-inactive' : 'status-circle-active'}`} />
                         </button>
                         <button
                           className="btn btn-ghost btn-sm client-delete"

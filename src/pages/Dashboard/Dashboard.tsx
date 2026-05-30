@@ -10,6 +10,7 @@ import type { StageRecord } from '../../utils/stageTracker';
 import { logActivity } from '../../utils/activityLogger';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { ActivityLog } from './ActivityLog';
+import { TaskManager } from './TaskManager';
 import './Dashboard.css';
 
 export function Dashboard() {
@@ -37,7 +38,7 @@ export function Dashboard() {
   const [newInstagram, setNewInstagram] = useState('');
   const [newComment, setNewComment] = useState('');
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
-  const [dashView, setDashView] = useState<'clients' | 'analytics' | 'activity'>('clients');
+  const [dashView, setDashView] = useState<'clients' | 'analytics' | 'activity' | 'tasks'>('clients');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'name'>('newest');
   const [showArchived, setShowArchived] = useState(false);
   const isAdmin = user?.role === 'admin';
@@ -228,9 +229,17 @@ export function Dashboard() {
             📋 Журнал
           </button>
         )}
+        <button
+          className={`dash-tab-btn ${dashView === 'tasks' ? 'dash-tab-btn-active' : ''}`}
+          onClick={() => setDashView('tasks')}
+        >
+          ✅ Задачи
+        </button>
       </div>
 
-      {dashView === 'activity' && isAdmin ? (
+      {dashView === 'tasks' ? (
+        <TaskManager clients={clients} />
+      ) : dashView === 'activity' && isAdmin ? (
         <ActivityLog />
       ) : dashView === 'analytics' ? (
         <AnalyticsDashboard clients={clients} />

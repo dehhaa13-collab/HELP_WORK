@@ -264,25 +264,8 @@ export function Dashboard() {
         <div className="dashboard-toolbar">
           <div className="dashboard-toolbar-left">
             <h2 className="dashboard-section-title">Ваши клиенты</h2>
-            {/* Archived count badge */}
-            {(() => {
-              const archivedCount = clients.filter(c => c.workspaceData?.[`hw_archived_${c.id}`]).length;
-              if (archivedCount === 0 && !showArchived) return null;
-              
-              return (
-                <button
-                  className={`archived-toggle-btn ${showArchived ? 'archived-toggle-btn-active' : ''}`}
-                  onClick={() => setShowArchived(v => !v)}
-                  title={showArchived ? 'Вернуться к активным клиентам' : 'Показать завершённых'}
-                >
-                  {showArchived ? '👁️ К активным' : `🗃️ ${archivedCount} завершён${archivedCount % 10 === 1 && archivedCount % 100 !== 11 ? '' : 'о'}`}
-                </button>
-              );
-            })()}
-          </div>
-          <div className="dashboard-toolbar-right">
-            {/* Sort control */}
-            <div className="sort-control">
+            {/* Sort control — visible on desktop inside left area */}
+            <div className="sort-control sort-control-desktop">
               <span className="sort-label">Сортировка:</span>
               <select
                 className="sort-select"
@@ -295,8 +278,39 @@ export function Dashboard() {
                 <option value="name">По имени А–Я</option>
               </select>
             </div>
+          </div>
+          <div className="dashboard-toolbar-right">
+            {/* Archived toggle */}
+            {(() => {
+              const archivedCount = clients.filter(c => c.workspaceData?.[`hw_archived_${c.id}`]).length;
+              if (archivedCount === 0 && !showArchived) return null;
+              return (
+                <button
+                  className={`archived-toggle-btn ${showArchived ? 'archived-toggle-btn-active' : ''}`}
+                  onClick={() => setShowArchived(v => !v)}
+                  title={showArchived ? 'Вернуться к активным клиентам' : 'Показать завершённых'}
+                >
+                  {showArchived ? '👁️ К активным' : `🗃️ ${archivedCount} завершён${archivedCount % 10 === 1 && archivedCount % 100 !== 11 ? '' : 'о'}`}
+                </button>
+              );
+            })()}
+            {/* Sort on mobile — compact icon button */}
+            <div className="sort-control sort-control-mobile">
+              <select
+                className="sort-select"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest' | 'name')}
+                id="client-sort-mobile"
+                aria-label="Сортировка"
+              >
+                <option value="newest">↓ Новые</option>
+                <option value="oldest">↑ Старые</option>
+                <option value="name">А–Я</option>
+              </select>
+            </div>
+            {/* Add button — hidden on mobile, replaced by FAB */}
             <button
-              className="dashboard-add-btn"
+              className="dashboard-add-btn dashboard-add-btn-desktop"
               onClick={() => setShowAddModal(true)}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -475,12 +489,11 @@ export function Dashboard() {
 
                     {/* Idle Warning badge removed in favor of corner indicator */}
 
-                    {/* Actions */}
-                    <div className="client-card-actions">
-                      {isDone && (
+                    {/* Actions — only show «Продлить» if done; open is done by tapping the card */}
+                    {isDone && (
+                      <div className="client-card-actions">
                         <button
-                          className="btn btn-sm"
-                          style={{ background: 'linear-gradient(135deg, #8b5cf6, #6366f1)', color: 'white' }}
+                          className="btn btn-sm btn-renew"
                           onClick={async (e) => {
                             e.stopPropagation();
                             try {
@@ -495,16 +508,10 @@ export function Dashboard() {
                             } catch { /* toast */ }
                           }}
                         >
-                          🔄 Продлить
+                          🔄 Продлить цикл
                         </button>
-                      )}
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={(e) => { e.stopPropagation(); selectClient(client.id); }}
-                      >
-                        Открыть →
-                      </button>
-                    </div>
+                      </div>
+                    )}
 
                     {/* Comment preview (Always at bottom) */}
                     <div className="client-comment-preview">
@@ -525,6 +532,15 @@ export function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Mobile FAB — floating add button */}
+      <button
+        className="dashboard-fab"
+        onClick={() => setShowAddModal(true)}
+        aria-label="Добавить клиента"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
       </>
       )}
 

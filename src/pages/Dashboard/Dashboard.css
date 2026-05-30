@@ -802,11 +802,11 @@
     gap: var(--space-3);
   }
 
-  /* Toolbar — single row on mobile */
+  /* Toolbar — single row on mobile, but wrap if too tight */
   .dashboard-toolbar {
     flex-direction: row;
     align-items: center;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: var(--space-2);
     margin-bottom: var(--space-4);
   }

@@ -687,7 +687,34 @@
   .dashboard-toolbar {
     flex-direction: column;
     align-items: stretch;
-    gap: var(--space-3);
+    gap: var(--space-4);
+  }
+
+  .dashboard-toolbar-left {
+    justify-content: space-between;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .dashboard-toolbar-right {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .sort-control {
+    width: 100%;
+    margin-bottom: var(--space-1);
+  }
+
+  .sort-select {
+    flex: 1;
+    padding: 10px 28px 10px 12px; /* larger touch target */
+  }
+
+  .archived-toggle-btn {
+    padding: 8px 16px; /* larger touch target */
+    font-size: var(--font-size-sm);
   }
 
   .dashboard-section-title {

@@ -626,7 +626,7 @@
   width: 0;
   height: 0;
   border-style: solid;
-  border-width: 48px 48px 0 0;
+  border-width: 32px 32px 0 0;
   z-index: 10;
   transition: border-color 0.3s ease;
   pointer-events: auto; /* To allow hovering for the title */

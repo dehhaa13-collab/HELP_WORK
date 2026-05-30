@@ -778,7 +778,7 @@ ${selectedTitles}
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'inline-flex', borderRadius: '10px', border: '1px solid var(--color-border)', overflow: 'hidden', fontSize: '13px', flexShrink: 0 }}>
               <button
                 onClick={() => setAiProvider('gemini')}
@@ -815,7 +815,7 @@ ${selectedTitles}
             
             <button 
               className={`btn btn-primary btn-lg ${isGeneratingScripts ? 'btn-magic' : ''}`}
-              style={{ width: '100%' }}
+              style={{ flex: '1 1 250px', minWidth: 0, padding: '12px 16px', fontSize: '15px' }}
               onClick={() => handleGenerateScripts()}
               disabled={isGeneratingScripts}
             >

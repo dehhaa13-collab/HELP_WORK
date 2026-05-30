@@ -38,6 +38,8 @@ export function Dashboard() {
   const [newComment, setNewComment] = useState('');
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [dashView, setDashView] = useState<'clients' | 'analytics' | 'activity'>('clients');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'name'>('newest');
+  const [showArchived, setShowArchived] = useState(false);
   const isAdmin = user?.role === 'admin';
 
   // Inline editing
@@ -128,8 +130,17 @@ export function Dashboard() {
 
 
 
-  // Track idle time — cloud synced via workspaceData
+  // === Archive toggle ===
   const updateWorkspaceData = useUpdateWorkspaceData();
+
+  const handleToggleArchived = async (e: React.MouseEvent, client: Client) => {
+    e.stopPropagation();
+    const key = `hw_archived_${client.id}`;
+    const newVal = !client.workspaceData?.[key];
+    updateWorkspaceData(client.id, key, newVal);
+  };
+
+  // Track idle time — cloud synced via workspaceData
   useEffect(() => {
     clients.forEach(client => {
       const stageKey = `hw_stage_record_${client.id}`;
@@ -239,13 +250,44 @@ export function Dashboard() {
       {/* Client Cards */}
       <div className="dashboard-content">
         <div className="dashboard-toolbar">
-          <h2 className="dashboard-section-title">Ваши клиенты</h2>
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowAddModal(true)}
-          >
-            <span>+</span> Добавить клиента
-          </button>
+          <div className="dashboard-toolbar-left">
+            <h2 className="dashboard-section-title">Ваши клиенты</h2>
+            {/* Archived count badge */}
+            {(() => {
+              const archivedCount = clients.filter(c => c.workspaceData?.[`hw_archived_${c.id}`]).length;
+              return archivedCount > 0 ? (
+                <button
+                  className={`archived-toggle-btn ${showArchived ? 'archived-toggle-btn-active' : ''}`}
+                  onClick={() => setShowArchived(v => !v)}
+                  title={showArchived ? 'Скрыть завершённых' : 'Показать завершённых'}
+                >
+                  {showArchived ? '👁️' : '🗃️'} {archivedCount} завершён{archivedCount === 1 ? '' : archivedCount >= 2 && archivedCount <= 4 ? 'о' : 'о'}
+                </button>
+              ) : null;
+            })()}
+          </div>
+          <div className="dashboard-toolbar-right">
+            {/* Sort control */}
+            <div className="sort-control">
+              <span className="sort-label">Сортировка:</span>
+              <select
+                className="sort-select"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest' | 'name')}
+                id="client-sort"
+              >
+                <option value="newest">Новые сверху</option>
+                <option value="oldest">Старые сверху</option>
+                <option value="name">По имени А–Я</option>
+              </select>
+            </div>
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowAddModal(true)}
+            >
+              <span>+</span> Добавить клиента
+            </button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -280,7 +322,17 @@ export function Dashboard() {
           </div>
         ) : (
           <div className="client-grid">
-            {clients.map((client) => {
+            {[...clients]
+              .filter(client => {
+                const isArchived = !!client.workspaceData?.[`hw_archived_${client.id}`];
+                return showArchived ? isArchived : !isArchived;
+              })
+              .sort((a, b) => {
+                if (sortOrder === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                if (sortOrder === 'oldest') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                return a.name.localeCompare(b.name, 'ru');
+              })
+              .map((client) => {
               // Manual stage (user-controlled)
               const manualStageKey = client.pipelineStage || 'new';
               const stage = PIPELINE_STAGES.find(s => s.key === manualStageKey);
@@ -289,6 +341,7 @@ export function Dashboard() {
               const progress = ((index) / (total - 1)) * 100;
               const isDone = manualStageKey === 'done';
               const isEditing = editingClientId === client.id;
+              const isArchived = !!client.workspaceData?.[`hw_archived_${client.id}`];
 
               // Idle tracking — reads cloud-synced stageRecord from workspaceData
               const stageRecord: StageRecord | null = client.workspaceData?.[`hw_stage_record_${client.id}`] || null;
@@ -299,7 +352,7 @@ export function Dashboard() {
               return (
                 <div
                   key={client.id}
-                  className={`client-card card ${idleLevel !== 'ok' ? `client-card-idle-${idleLevel}` : ''}`}
+                  className={`client-card card ${isArchived ? 'client-card-archived' : idleLevel !== 'ok' ? `client-card-idle-${idleLevel}` : ''}`}
                   onClick={() => { if (!isEditing) selectClient(client.id); }}
                   onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !isEditing) { e.preventDefault(); selectClient(client.id); } }}
                   role="button"
@@ -336,13 +389,23 @@ export function Dashboard() {
                         )}
                         <span className="client-instagram">{client.instagram}</span>
                       </div>
-                      <button
-                        className="btn btn-ghost btn-sm client-delete"
-                        onClick={(e) => { e.stopPropagation(); handleRemoveClient(client); }}
-                        title="Удалить клиента"
-                      >
-                        🗑️
-                      </button>
+                      <div className="client-card-top-actions" onClick={(e) => e.stopPropagation()}>
+                        {/* Archive toggle */}
+                        <button
+                          className={`btn btn-ghost btn-sm archive-toggle ${isArchived ? 'archive-toggle-active' : ''}`}
+                          onClick={(e) => handleToggleArchived(e, client)}
+                          title={isArchived ? 'Возобновить работу' : 'Отметить как завершённого'}
+                        >
+                          {isArchived ? '✅' : '○'}
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm client-delete"
+                          onClick={(e) => { e.stopPropagation(); handleRemoveClient(client); }}
+                          title="Удалить клиента"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
 
                     {/* Comment preview */}
@@ -437,6 +500,14 @@ export function Dashboard() {
                 </div>
               );
             })}
+            {/* Empty archived state */}
+            {showArchived && clients.filter(c => !!c.workspaceData?.[`hw_archived_${c.id}`]).length === 0 && (
+              <div className="dashboard-empty" style={{ gridColumn: '1 / -1' }}>
+                <div className="dashboard-empty-icon">🗃️</div>
+                <h3>Нет завершённых клиентов</h3>
+                <p>Отметьте клиента как завершённого, нажав «○» на его карточке</p>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -870,7 +870,8 @@
   color: var(--color-text-secondary);
   background-color: var(--color-bg);
   border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-2);
+  padding: 8px 12px;
   margin-top: var(--space-2);
+  margin-bottom: var(--space-4);
   line-height: 1.4;
 }

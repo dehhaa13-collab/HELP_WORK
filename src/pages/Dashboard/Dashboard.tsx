@@ -198,9 +198,11 @@ export function Dashboard() {
           </div>
         </div>
         <div className="dashboard-header-right">
+          {/* Временно скрыто по просьбе:
           <span className="dashboard-client-count badge badge-primary">
             {isLoading ? '...' : `${clients.length} ${(() => { const n = clients.length % 10; const n100 = clients.length % 100; if (n100 >= 11 && n100 <= 14) return 'клиентов'; if (n === 1) return 'клиент'; if (n >= 2 && n <= 4) return 'клиента'; return 'клиентов'; })()}`}
           </span>
+          */}
           <button className="btn btn-ghost" onClick={logout}>
             Выйти
           </button>

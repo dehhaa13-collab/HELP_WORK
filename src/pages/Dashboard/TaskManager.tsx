@@ -176,13 +176,29 @@ export function TaskManager({ clients }: Props) {
             {/* Deadline */}
             <div className="task-form-group">
               <label className="task-form-label">Дедлайн (необязательно)</label>
-              <input
-                type="date"
-                className="input"
-                value={newDeadline}
-                onChange={e => setNewDeadline(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-              />
+              <div className="task-deadline-quick-selector">
+                <button
+                  type="button"
+                  className={`task-quick-btn ${newDeadline === new Date().toISOString().split('T')[0] ? 'active' : ''}`}
+                  onClick={() => setNewDeadline(new Date().toISOString().split('T')[0])}
+                >
+                  Сегодня
+                </button>
+                <button
+                  type="button"
+                  className={`task-quick-btn ${newDeadline === new Date(Date.now() + 86400000).toISOString().split('T')[0] ? 'active' : ''}`}
+                  onClick={() => setNewDeadline(new Date(Date.now() + 86400000).toISOString().split('T')[0])}
+                >
+                  Завтра
+                </button>
+                <input
+                  type="date"
+                  className="task-quick-date-input"
+                  value={newDeadline}
+                  onChange={e => setNewDeadline(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
             </div>
 
             {/* Client */}

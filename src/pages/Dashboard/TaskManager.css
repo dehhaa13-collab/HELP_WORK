@@ -196,6 +196,70 @@
   z-index: 1;
 }
 
+/* Quick Date Selector */
+.task-deadline-quick-selector {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.task-quick-btn {
+  padding: 10px 14px;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.task-quick-btn:hover {
+  background: #f8fafc;
+  color: var(--color-text);
+}
+
+.task-quick-btn.active {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+}
+
+.task-quick-date-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  outline: none;
+  min-width: 140px;
+}
+
+.task-quick-date-input:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.task-quick-date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  padding: 4px;
+}
+
+.task-quick-date-input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
 /* Filters */
 .task-filters {
   display: flex;

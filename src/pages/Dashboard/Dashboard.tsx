@@ -424,12 +424,7 @@ export function Dashboard() {
                       </div>
                     </div>
 
-                    {/* Comment preview */}
-                    {client.meetingSummary && (
-                      <div className="client-comment-preview">
-                        💬 {client.meetingSummary.length > 60 ? client.meetingSummary.substring(0, 60) + '...' : client.meetingSummary}
-                      </div>
-                    )}
+
 
                     {/* Pipeline Progress — Manual control */}
                     <div className="client-pipeline">
@@ -506,6 +501,11 @@ export function Dashboard() {
                       >
                         Открыть →
                       </button>
+                    </div>
+
+                    {/* Comment preview (Always at bottom) */}
+                    <div className="client-comment-preview">
+                      💬 {client.meetingSummary ? client.meetingSummary : 'Нет заметок...'}
                     </div>
                   </div>
                 </div>

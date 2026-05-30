@@ -247,7 +247,7 @@ export function Dashboard() {
         <AnalyticsDashboard clients={clients} />
       ) : (
       <>
-      {/* Pipeline Legend */}
+      {/* Pipeline Legend — временно скрыто
       <div className="pipeline-legend">
         {PIPELINE_STAGES.map((stage, i) => (
           <div key={stage.key} className="pipeline-legend-item">
@@ -257,6 +257,7 @@ export function Dashboard() {
           </div>
         ))}
       </div>
+      */}
 
       {/* Client Cards */}
       <div className="dashboard-content">

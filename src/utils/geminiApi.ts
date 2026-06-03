@@ -298,37 +298,54 @@ export async function fetchGeminiWithSchema<T>(
 /**
  * Функция для работы с OpenAI API через наш прокси /api/openai
  */
+
 /**
  * Рекурсивно патчит JSON-схему для OpenAI Structured Outputs:
  * - Добавляет additionalProperties: false на каждый объект
- * - Делает все свойства required (OpenAI strict mode не поддерживает optional)
+ * - Делает все свойства required (OpenAI strict mode требует этого)
+ * - Раскрывает anyOf с null → просто убирает null (strict не поддерживает optional через anyOf)
+ * - Убирает неподдерживаемые поля: $schema, $ref, $defs, title, default
  */
 function patchSchemaForOpenAI(schema: any): any {
   if (!schema || typeof schema !== 'object') return schema;
 
   const patched = { ...schema };
 
-  // Убираем OpenAPI-специфичные поля, которые OpenAI не понимает
+  // Убираем поля, которые OpenAI strict mode не принимает
   delete patched.$schema;
   delete patched.$ref;
+  delete patched.$defs;
+  delete patched.title;
+  delete patched.default;
 
+  // Раскрываем anyOf вида [{ type: 'X' }, { type: 'null' }] → просто { type: 'X' }
+  if (patched.anyOf && Array.isArray(patched.anyOf)) {
+    const nonNull = patched.anyOf.filter((s: any) => s?.type !== 'null' && s !== null);
+    if (nonNull.length === 1) {
+      // Заменяем anyOf на сам тип
+      const unwrapped = patchSchemaForOpenAI(nonNull[0]);
+      return unwrapped;
+    }
+    patched.anyOf = patched.anyOf.map(patchSchemaForOpenAI);
+  }
+
+  if (patched.oneOf && Array.isArray(patched.oneOf)) {
+    patched.oneOf = patched.oneOf.map(patchSchemaForOpenAI);
+  }
+
+  // Объект: добавляем additionalProperties: false и делаем все поля required
   if (patched.type === 'object' && patched.properties) {
     patched.additionalProperties = false;
-    // Все ключи должны быть required
     patched.required = Object.keys(patched.properties);
-    // Рекурсия по свойствам
     for (const key of Object.keys(patched.properties)) {
       patched.properties[key] = patchSchemaForOpenAI(patched.properties[key]);
     }
   }
 
+  // Массив: рекурсия по items
   if (patched.type === 'array' && patched.items) {
     patched.items = patchSchemaForOpenAI(patched.items);
   }
-
-  // anyOf / oneOf — рекурсия
-  if (patched.anyOf) patched.anyOf = patched.anyOf.map(patchSchemaForOpenAI);
-  if (patched.oneOf) patched.oneOf = patched.oneOf.map(patchSchemaForOpenAI);
 
   return patched;
 }
@@ -340,7 +357,8 @@ export async function fetchOpenAIWithSchema<T>(
   model = 'gpt-4o-mini' // или gpt-4o
 ): Promise<T> {
   const maxRetries = 2;
-  const rawSchema = zodToJsonSchema(schema as any, { target: 'openApi3' });
+  // jsonSchema7 генерирует более чистую схему без OpenAPI-специфики
+  const rawSchema = zodToJsonSchema(schema as any, { target: 'jsonSchema7' });
   const jsonSchema = patchSchemaForOpenAI(rawSchema);
 
   // Clone to avoid mutating the caller's array during retries

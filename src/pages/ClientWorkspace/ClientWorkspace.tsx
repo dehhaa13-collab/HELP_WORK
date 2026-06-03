@@ -41,18 +41,18 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
-  { key: 'dashboard', label: 'Дашборд', emoji: '🗄️' },
+  // { key: 'dashboard', label: 'Дашборд', emoji: '🗄️' },  // ВРЕМЕННО СКРЫТО (Канбан)
   { key: 'ai-analysis', label: 'AI-анализ', emoji: '🤖' },
   { key: 'formats', label: 'Форматы', emoji: '📱' },
   { key: 'scenarios', label: 'Сценарии', emoji: '📝' },
   { key: 'editing', label: 'Монтаж', emoji: '✂️' },
   { key: 'finance', label: 'Финансы', emoji: '💰' },
-  { key: 'targeting', label: 'Таргет', emoji: '📊' },
+  // { key: 'targeting', label: 'Таргет', emoji: '📊' },  // ВРЕМЕННО СКРЫТО (Реклама)
   { key: 'feedback', label: 'Отзывы', emoji: '💬' },
 ];
 
 export function ClientWorkspace() {
-  const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
+  const [activeTab, setActiveTab] = useState<TabKey>('ai-analysis');
   const { selectedClientId, selectClient } = useClientStore();
   const { data: clients = [], isLoading } = useClients();
 

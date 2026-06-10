@@ -348,13 +348,13 @@ export function AiAnalysisTab({ clientId }: Props) {
           <div className="ai-provider-toggle-wrap">
             <div className="provider-toggle-styled" onClick={() => setAiProvider(prev => prev === 'gemini' ? 'openai' : 'gemini')}>
               <span className={`pt-label pt-free ${aiProvider === 'openai' ? 'dimmed' : ''}`}>
-                🟢 Gemini <span>бесплатно</span>
+                🟢 Gemini
               </span>
               <div className={`pt-switch ${aiProvider === 'openai' ? 'active' : ''}`}>
                 <div className="pt-dot"></div>
               </div>
               <span className={`pt-label pt-paid ${aiProvider !== 'openai' ? 'dimmed' : ''}`}>
-                ⚡ OpenAI <span>платный</span>
+                ⚡ OpenAI
               </span>
             </div>
           </div>

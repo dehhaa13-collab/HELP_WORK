@@ -1,8 +1,9 @@
 /* ============================================
-   Вкладка: Финансы
-   Учёт оплат, остатков и расходов по клиенту
+   Вкладка: Финансы (v2)
+   Учёт оплат, расходов на команду, прочих расходов
    ============================================ */
 
+import { useState } from 'react';
 import { usePersistedState } from '../../../utils/usePersistedState';
 import './FinanceTab.css';
 
@@ -10,37 +11,82 @@ interface Props {
   clientId: string;
 }
 
+// === Типы данных ===
+
+interface PaymentEntry {
+  id: string;
+  amount: number;
+  date: string;       // "YYYY-MM-DD"
+  note: string;
+}
+
+interface TeamCostEntry {
+  id: string;
+  type: string;       // Ключ из TEAM_COST_PRESETS
+  label: string;      // Человеческое название
+  quantity: number;
+  unitPrice: number;
+  date: string;
+  note: string;
+}
+
 interface ExpenseItem {
   id: string;
   name: string;
   amount: number;
+  date: string;
 }
 
 interface FinanceData {
-  received: number;      // Сколько получили от клиента
-  totalAgreed: number;   // Общая сумма по договору
+  received: number;
+  totalAgreed: number;
   expenses: ExpenseItem[];
+  payments: PaymentEntry[];
+  teamCosts: TeamCostEntry[];
 }
 
 const DEFAULT_FINANCE: FinanceData = {
   received: 0,
   totalAgreed: 0,
   expenses: [],
+  payments: [],
+  teamCosts: [],
 };
+
+// === Пресеты ===
+
+const TEAM_COST_PRESETS = [
+  { type: 'video_editing',    label: '🎬 Монтаж видео (Богдан)',   defaultPrice: 350  },
+  { type: 'producer',         label: '👨‍💼 Продюсер',                defaultPrice: 2000 },
+  { type: 'cover_design',     label: '🎨 Создание обложек',        defaultPrice: 0    },
+  { type: 'acquisition',      label: '📢 Стоимость привлечения',   defaultPrice: 0    },
+  { type: 'content_shooting', label: '📸 Съёмка контента',         defaultPrice: 0    },
+];
 
 const EXPENSE_PRESETS = [
   'Анализ страницы',
-  'Создание сценариев',
-  'Монтаж видео',
-  'Обложки / Дизайн',
   'Таргетированная реклама',
-  'Съёмка / Контент',
   'Непредвиденные расходы',
 ];
 
-const formatMoney = (n: number) => {
-  return n.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-};
+const formatMoney = (n: number) =>
+  n.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+const today = () => new Date().toISOString().split('T')[0];
+
+
+type SortDir = 'newest' | 'oldest';
+
+function sortByDate<T extends { date: string }>(arr: T[], dir: SortDir): T[] {
+  return [...arr].sort((a, b) => {
+    if (!a.date && !b.date) return 0;
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return dir === 'newest' ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date);
+  });
+}
+
+// === Компонент ===
 
 export function FinanceTab({ clientId }: Props) {
   const [finance, setFinance] = usePersistedState<FinanceData>(
@@ -48,47 +94,108 @@ export function FinanceTab({ clientId }: Props) {
     DEFAULT_FINANCE
   );
 
-  const totalExpenses = finance.expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const remaining = finance.totalAgreed - finance.received;
-  const profit = finance.received - totalExpenses;
-  const profitPercent = finance.received > 0 ? Math.min(100, Math.max(0, (profit / finance.received) * 100)) : 0;
+  const [sortDir, setSortDir] = useState<SortDir>('newest');
 
-  const updateField = (field: 'received' | 'totalAgreed', value: string) => {
-    const num = parseFloat(value.replace(/[^\d.]/g, '')) || 0;
-    setFinance(prev => ({ ...prev, [field]: num }));
+  // === Расчёты ===
+  const totalPayments = (finance.payments || []).reduce((s, p) => s + (p.amount || 0), 0);
+  const effectiveReceived = (finance.payments || []).length > 0 ? totalPayments : finance.received;
+  const totalTeamCosts = (finance.teamCosts || []).reduce((s, t) => s + ((t.quantity || 0) * (t.unitPrice || 0)), 0);
+  const totalExpenses = (finance.expenses || []).reduce((s, e) => s + (e.amount || 0), 0);
+  const allCosts = totalTeamCosts + totalExpenses;
+  const remaining = finance.totalAgreed - effectiveReceived;
+  const profit = effectiveReceived - allCosts;
+  const profitPercent = effectiveReceived > 0 ? Math.min(100, Math.max(0, (profit / effectiveReceived) * 100)) : 0;
+
+  // === Оплаты ===
+  const addPayment = () => {
+    const p: PaymentEntry = { id: crypto.randomUUID(), amount: 0, date: today(), note: '' };
+    setFinance(prev => ({
+      ...prev,
+      payments: [...(prev.payments || []), p],
+    }));
   };
 
-  const addExpense = (name: string = '') => {
-    const newExpense: ExpenseItem = {
+  const updatePayment = (id: string, patch: Partial<PaymentEntry>) => {
+    setFinance(prev => ({
+      ...prev,
+      payments: (prev.payments || []).map(p => p.id === id ? { ...p, ...patch } : p),
+    }));
+  };
+
+  const removePayment = (id: string) => {
+    setFinance(prev => ({
+      ...prev,
+      payments: (prev.payments || []).filter(p => p.id !== id),
+    }));
+  };
+
+  // === Команда ===
+  const addTeamCost = (preset?: typeof TEAM_COST_PRESETS[number]) => {
+    const t: TeamCostEntry = {
       id: crypto.randomUUID(),
-      name,
-      amount: 0,
+      type: preset?.type || 'other',
+      label: preset?.label || '📦 Другое',
+      quantity: 1,
+      unitPrice: preset?.defaultPrice || 0,
+      date: today(),
+      note: '',
     };
     setFinance(prev => ({
       ...prev,
-      expenses: [...prev.expenses, newExpense],
+      teamCosts: [...(prev.teamCosts || []), t],
+    }));
+  };
+
+  const updateTeamCost = (id: string, patch: Partial<TeamCostEntry>) => {
+    setFinance(prev => ({
+      ...prev,
+      teamCosts: (prev.teamCosts || []).map(t => t.id === id ? { ...t, ...patch } : t),
+    }));
+  };
+
+  const removeTeamCost = (id: string) => {
+    setFinance(prev => ({
+      ...prev,
+      teamCosts: (prev.teamCosts || []).filter(t => t.id !== id),
+    }));
+  };
+
+  // === Расходы ===
+  const addExpense = (name: string = '') => {
+    const e: ExpenseItem = { id: crypto.randomUUID(), name, amount: 0, date: today() };
+    setFinance(prev => ({
+      ...prev,
+      expenses: [...(prev.expenses || []), e],
     }));
   };
 
   const updateExpense = (id: string, patch: Partial<ExpenseItem>) => {
     setFinance(prev => ({
       ...prev,
-      expenses: prev.expenses.map(e =>
-        e.id === id ? { ...e, ...patch } : e
-      ),
+      expenses: (prev.expenses || []).map(e => e.id === id ? { ...e, ...patch } : e),
     }));
   };
 
   const removeExpense = (id: string) => {
     setFinance(prev => ({
       ...prev,
-      expenses: prev.expenses.filter(e => e.id !== id),
+      expenses: (prev.expenses || []).filter(e => e.id !== id),
     }));
   };
 
-  // Какие пресеты ещё не добавлены
-  const usedNames = new Set(finance.expenses.map(e => e.name));
-  const availablePresets = EXPENSE_PRESETS.filter(p => !usedNames.has(p));
+  const updateField = (field: 'totalAgreed', value: string) => {
+    const num = parseFloat(value.replace(/[^\d.]/g, '')) || 0;
+    setFinance(prev => ({ ...prev, [field]: num }));
+  };
+
+  // Пресеты для расходов
+  const usedExpenseNames = new Set((finance.expenses || []).map(e => e.name));
+  const availableExpensePresets = EXPENSE_PRESETS.filter(p => !usedExpenseNames.has(p));
+
+  // Сортировка
+  const sortedPayments = sortByDate(finance.payments || [], sortDir);
+  const sortedTeamCosts = sortByDate(finance.teamCosts || [], sortDir);
+  const sortedExpenses = sortByDate(finance.expenses || [], sortDir);
 
   return (
     <div className="finance-tab">
@@ -98,7 +205,7 @@ export function FinanceTab({ clientId }: Props) {
           <div className="card-body">
             <span className="finance-summary-emoji">💰</span>
             <span className={`finance-summary-value finance-value-positive`}>
-              {formatMoney(finance.received)} ₴
+              {formatMoney(effectiveReceived)} ₴
             </span>
             <span className="finance-summary-label">Получено</span>
           </div>
@@ -107,9 +214,9 @@ export function FinanceTab({ clientId }: Props) {
           <div className="card-body">
             <span className="finance-summary-emoji">📤</span>
             <span className={`finance-summary-value finance-value-negative`}>
-              {formatMoney(totalExpenses)} ₴
+              {formatMoney(allCosts)} ₴
             </span>
-            <span className="finance-summary-label">Расходы</span>
+            <span className="finance-summary-label">Все расходы</span>
           </div>
         </div>
         <div className="finance-summary-card card">
@@ -124,7 +231,7 @@ export function FinanceTab({ clientId }: Props) {
       </div>
 
       {/* Profit Bar */}
-      {finance.received > 0 && (
+      {effectiveReceived > 0 && (
         <div className="finance-profit-bar">
           <div className="finance-profit-track">
             <div
@@ -138,81 +245,233 @@ export function FinanceTab({ clientId }: Props) {
             />
           </div>
           <div className="finance-profit-label">
-            <span>Расходы: {formatMoney(totalExpenses)} ₴</span>
+            <span>Команда: {formatMoney(totalTeamCosts)} ₴ / Прочие: {formatMoney(totalExpenses)} ₴</span>
             <span>Маржинальность: {Math.round(profitPercent)}%</span>
           </div>
         </div>
       )}
 
-      {/* === Income === */}
+      {/* === Sort Control === */}
+      <div className="finance-sort-bar">
+        <span className="finance-sort-label">Сортировка по дате:</span>
+        <button
+          className={`finance-sort-btn ${sortDir === 'newest' ? 'finance-sort-btn-active' : ''}`}
+          onClick={() => setSortDir('newest')}
+        >
+          ↓ Новые
+        </button>
+        <button
+          className={`finance-sort-btn ${sortDir === 'oldest' ? 'finance-sort-btn-active' : ''}`}
+          onClick={() => setSortDir('oldest')}
+        >
+          ↑ Старые
+        </button>
+      </div>
+
+      {/* ==========================================
+          СЕКЦИЯ 1: Оплаты от клиента
+          ========================================== */}
       <div className="card">
         <div className="card-body">
           <h3 className="ai-section-title">💵 Оплата от клиента</h3>
-          <p className="ai-section-desc">
-            Укажите общую сумму по договору и сколько уже получено.
-          </p>
 
-          <div className="finance-income-grid">
-            <div className="finance-field">
-              <label className="finance-field-label">Сумма по договору</label>
-              <div className="finance-input-wrapper">
-                <span className="finance-currency">₴</span>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="0"
-                  value={finance.totalAgreed || ''}
-                  onChange={(e) => updateField('totalAgreed', e.target.value)}
-                />
-              </div>
-              <span className="finance-field-hint">Полная стоимость пакета услуг</span>
+          {/* Сумма по договору */}
+          <div className="finance-agreed-row">
+            <label className="finance-field-label">Сумма по договору</label>
+            <div className="finance-input-wrapper">
+              <span className="finance-currency">₴</span>
+              <input
+                type="text"
+                className="input"
+                placeholder="0"
+                value={finance.totalAgreed || ''}
+                onChange={(e) => updateField('totalAgreed', e.target.value)}
+              />
             </div>
-
-            <div className="finance-field">
-              <label className="finance-field-label">Получено</label>
-              <div className="finance-input-wrapper">
-                <span className="finance-currency">₴</span>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="0"
-                  value={finance.received || ''}
-                  onChange={(e) => updateField('received', e.target.value)}
-                />
-              </div>
-              <span className="finance-field-hint">
-                {remaining > 0 && (
-                  <>Остаток: <b style={{ color: 'var(--color-warning, #EAB308)' }}>{formatMoney(remaining)} ₴</b></>
-                )}
-                {remaining === 0 && finance.totalAgreed > 0 && (
-                  <b style={{ color: 'var(--color-success)' }}>✅ Оплачено полностью</b>
-                )}
-                {remaining < 0 && (
-                  <b style={{ color: 'var(--color-success)' }}>+{formatMoney(Math.abs(remaining))} ₴ переплата</b>
-                )}
+            {remaining > 0 && effectiveReceived > 0 && (
+              <span className="finance-field-hint" style={{ color: 'var(--color-warning, #EAB308)' }}>
+                Остаток: <b>{formatMoney(remaining)} ₴</b>
               </span>
+            )}
+            {remaining <= 0 && finance.totalAgreed > 0 && effectiveReceived > 0 && (
+              <span className="finance-field-hint" style={{ color: 'var(--color-success)' }}>
+                ✅ Оплачено полностью
+              </span>
+            )}
+          </div>
+
+          {/* Таблица оплат */}
+          <div className="finance-table-section">
+            <div className="finance-table-header finance-payment-header">
+              <span>Дата</span>
+              <span>Сумма</span>
+              <span>Заметка</span>
+              <span></span>
             </div>
+            {sortedPayments.map(p => (
+              <div key={p.id} className="finance-table-row finance-payment-row">
+                <input
+                  type="date"
+                  className="input finance-date-input"
+                  value={p.date}
+                  onChange={e => updatePayment(p.id, { date: e.target.value })}
+                />
+                <div className="finance-input-wrapper">
+                  <span className="finance-currency">₴</span>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="0"
+                    value={p.amount || ''}
+                    onChange={e => {
+                      const num = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0;
+                      updatePayment(p.id, { amount: num });
+                    }}
+                  />
+                </div>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Предоплата, доплата..."
+                  value={p.note}
+                  onChange={e => updatePayment(p.id, { note: e.target.value })}
+                />
+                <button className="finance-remove-btn" onClick={() => removePayment(p.id)} title="Удалить">✕</button>
+              </div>
+            ))}
+            {(finance.payments || []).length === 0 && (
+              <p className="finance-empty-hint">Нет оплат. Добавьте первую.</p>
+            )}
+          </div>
+
+          <div className="finance-actions-row">
+            <button className="btn btn-secondary btn-sm" onClick={addPayment}>
+              + Добавить оплату
+            </button>
+            {(finance.payments || []).length > 0 && (
+              <span className="finance-inline-total">
+                Итого получено: <b className="finance-value-positive">{formatMoney(totalPayments)} ₴</b>
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* === Expenses === */}
+      {/* ==========================================
+          СЕКЦИЯ 2: Расходы на внутреннюю команду
+          ========================================== */}
       <div className="card">
         <div className="card-body">
-          <h3 className="ai-section-title">📊 Расходы на клиента</h3>
+          <h3 className="ai-section-title">👥 Расходы на внутреннюю команду</h3>
           <p className="ai-section-desc">
-            Добавьте статьи расходов вручную или из шаблонов.
+            Монтаж, продюсер, обложки и другие внутренние расходы.
           </p>
 
-          <div className="finance-expenses-list">
-            {finance.expenses.map((expense) => (
-              <div key={expense.id} className="finance-expense-row">
+          <div className="finance-table-section">
+            <div className="finance-table-header finance-team-header">
+              <span>Статья</span>
+              <span>Кол-во</span>
+              <span>Ставка</span>
+              <span>Итого</span>
+              <span>Дата</span>
+              <span></span>
+            </div>
+            {sortedTeamCosts.map(t => {
+              const lineTotal = (t.quantity || 0) * (t.unitPrice || 0);
+              return (
+                <div key={t.id} className="finance-table-row finance-team-row">
+                  <span className="finance-team-label">{t.label}</span>
+                  <input
+                    type="number"
+                    className="input finance-num-input"
+                    min="0"
+                    value={t.quantity || ''}
+                    onChange={e => updateTeamCost(t.id, { quantity: parseInt(e.target.value) || 0 })}
+                  />
+                  <div className="finance-input-wrapper">
+                    <span className="finance-currency">₴</span>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="0"
+                      value={t.unitPrice || ''}
+                      onChange={e => {
+                        const num = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0;
+                        updateTeamCost(t.id, { unitPrice: num });
+                      }}
+                    />
+                  </div>
+                  <span className="finance-team-total">{formatMoney(lineTotal)} ₴</span>
+                  <input
+                    type="date"
+                    className="input finance-date-input"
+                    value={t.date}
+                    onChange={e => updateTeamCost(t.id, { date: e.target.value })}
+                  />
+                  <button className="finance-remove-btn" onClick={() => removeTeamCost(t.id)} title="Удалить">✕</button>
+                </div>
+              );
+            })}
+            {(finance.teamCosts || []).length === 0 && (
+              <p className="finance-empty-hint">Добавьте расходы на команду из шаблонов ниже.</p>
+            )}
+          </div>
+
+          {/* Team Presets */}
+          <div className="finance-presets">
+            {TEAM_COST_PRESETS.map(preset => (
+              <button
+                key={preset.type}
+                className="finance-preset-btn"
+                onClick={() => addTeamCost(preset)}
+              >
+                + {preset.label}{preset.defaultPrice > 0 ? ` (${formatMoney(preset.defaultPrice)} ₴)` : ''}
+              </button>
+            ))}
+          </div>
+
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => addTeamCost()}
+            style={{ marginTop: 'var(--space-3)' }}
+          >
+            + Другой расход на команду
+          </button>
+
+          {(finance.teamCosts || []).length > 0 && (
+            <div className="finance-expense-total">
+              <span>Итого на команду:</span>
+              <span className="finance-expense-total-value">{formatMoney(totalTeamCosts)} ₴</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ==========================================
+          СЕКЦИЯ 3: Прочие расходы
+          ========================================== */}
+      <div className="card">
+        <div className="card-body">
+          <h3 className="ai-section-title">📊 Прочие расходы</h3>
+          <p className="ai-section-desc">
+            Реклама, анализ, непредвиденные расходы и другое.
+          </p>
+
+          <div className="finance-table-section">
+            <div className="finance-table-header finance-expense-header">
+              <span>Название</span>
+              <span>Сумма</span>
+              <span>Дата</span>
+              <span></span>
+            </div>
+            {sortedExpenses.map(expense => (
+              <div key={expense.id} className="finance-table-row finance-expense-row-v2">
                 <input
                   type="text"
                   className="input"
                   placeholder="Название расхода"
                   value={expense.name}
-                  onChange={(e) => updateExpense(expense.id, { name: e.target.value })}
+                  onChange={e => updateExpense(expense.id, { name: e.target.value })}
                 />
                 <div className="finance-input-wrapper">
                   <span className="finance-currency">₴</span>
@@ -221,33 +480,30 @@ export function FinanceTab({ clientId }: Props) {
                     className="input"
                     placeholder="0"
                     value={expense.amount || ''}
-                    onChange={(e) => {
+                    onChange={e => {
                       const num = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0;
                       updateExpense(expense.id, { amount: num });
                     }}
                   />
                 </div>
-                <button
-                  className="finance-remove-btn"
-                  onClick={() => removeExpense(expense.id)}
-                  title="Удалить"
-                >
-                  ✕
-                </button>
+                <input
+                  type="date"
+                  className="input finance-date-input"
+                  value={expense.date || ''}
+                  onChange={e => updateExpense(expense.id, { date: e.target.value })}
+                />
+                <button className="finance-remove-btn" onClick={() => removeExpense(expense.id)} title="Удалить">✕</button>
               </div>
             ))}
-
-            {finance.expenses.length === 0 && (
-              <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', padding: 'var(--space-4) 0' }}>
-                Пока нет расходов. Добавьте из шаблонов ниже или создайте свой.
-              </p>
+            {(finance.expenses || []).length === 0 && (
+              <p className="finance-empty-hint">Нет расходов. Добавьте из шаблонов или создайте свой.</p>
             )}
           </div>
 
-          {/* Presets */}
-          {availablePresets.length > 0 && (
+          {/* Expense Presets */}
+          {availableExpensePresets.length > 0 && (
             <div className="finance-presets">
-              {availablePresets.map((preset) => (
+              {availableExpensePresets.map(preset => (
                 <button
                   key={preset}
                   className="finance-preset-btn"
@@ -267,17 +523,43 @@ export function FinanceTab({ clientId }: Props) {
             + Добавить расход
           </button>
 
-          {/* Total */}
-          {finance.expenses.length > 0 && (
+          {(finance.expenses || []).length > 0 && (
             <div className="finance-expense-total">
-              <span>Итого расходов:</span>
-              <span className="finance-expense-total-value">
-                {formatMoney(totalExpenses)} ₴
-              </span>
+              <span>Итого прочих:</span>
+              <span className="finance-expense-total-value">{formatMoney(totalExpenses)} ₴</span>
             </div>
           )}
         </div>
       </div>
+
+      {/* === Общая сводка === */}
+      {(allCosts > 0 || effectiveReceived > 0) && (
+        <div className="card finance-grand-summary">
+          <div className="card-body">
+            <h3 className="ai-section-title">📋 Итоговая сводка</h3>
+            <div className="finance-summary-table">
+              <div className="finance-summary-row">
+                <span>💰 Получено от клиента</span>
+                <span className="finance-value-positive">{formatMoney(effectiveReceived)} ₴</span>
+              </div>
+              <div className="finance-summary-row">
+                <span>👥 Расходы на команду</span>
+                <span className="finance-value-negative">−{formatMoney(totalTeamCosts)} ₴</span>
+              </div>
+              <div className="finance-summary-row">
+                <span>📊 Прочие расходы</span>
+                <span className="finance-value-negative">−{formatMoney(totalExpenses)} ₴</span>
+              </div>
+              <div className="finance-summary-row finance-summary-row-total">
+                <span>{profit >= 0 ? '📈' : '📉'} Чистая прибыль</span>
+                <span className={profit >= 0 ? 'finance-value-positive' : 'finance-value-negative'}>
+                  {profit >= 0 ? '+' : ''}{formatMoney(profit)} ₴
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

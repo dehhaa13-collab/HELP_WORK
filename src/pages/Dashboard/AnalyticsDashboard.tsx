@@ -17,6 +17,8 @@ interface FinanceData {
   received: number;
   totalAgreed: number;
   expenses: { id: string; name: string; amount: number }[];
+  payments?: { id: string; amount: number; date: string; note: string }[];
+  teamCosts?: { id: string; type: string; label: string; quantity: number; unitPrice: number; date: string; note: string }[];
 }
 
 const fmt = (n: number) => n.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -33,6 +35,7 @@ export function AnalyticsDashboard({ clients }: Props) {
     let totalReceived = 0;
     let totalAgreed = 0;
     let totalExpenses = 0;
+    let totalTeamCosts = 0;
     const stageCounts: Record<string, number> = {};
     const expensesByCategory: Record<string, number> = {};
     const clientFinances: {
@@ -41,6 +44,7 @@ export function AnalyticsDashboard({ clients }: Props) {
       received: number;
       agreed: number;
       expenses: number;
+      teamCosts: number;
       profit: number;
       remaining: number;
     }[] = [];
@@ -57,31 +61,45 @@ export function AnalyticsDashboard({ clients }: Props) {
       const finKey = `hw_finance_${client.id}`;
       const finData: FinanceData = client.workspaceData?.[finKey] || { received: 0, totalAgreed: 0, expenses: [] };
       
-      const clientExpenses = (finData.expenses || []).reduce((s, e) => s + (e.amount || 0), 0);
+      // Received: from payments[] if available, otherwise from received field
+      const paymentsSum = (finData.payments || []).reduce((s, p) => s + (p.amount || 0), 0);
+      const clientReceived = (finData.payments || []).length > 0 ? paymentsSum : (finData.received || 0);
       
-      totalReceived += finData.received || 0;
+      const clientExpenses = (finData.expenses || []).reduce((s, e) => s + (e.amount || 0), 0);
+      const clientTeamCosts = (finData.teamCosts || []).reduce((s, t) => s + ((t.quantity || 0) * (t.unitPrice || 0)), 0);
+      
+      totalReceived += clientReceived;
       totalAgreed += finData.totalAgreed || 0;
       totalExpenses += clientExpenses;
+      totalTeamCosts += clientTeamCosts;
 
-      // Category breakdown
+      // Category breakdown — include both expenses and teamCosts
       (finData.expenses || []).forEach(e => {
         if (e.name && e.amount) {
           expensesByCategory[e.name] = (expensesByCategory[e.name] || 0) + e.amount;
+        }
+      });
+      (finData.teamCosts || []).forEach(t => {
+        const total = (t.quantity || 0) * (t.unitPrice || 0);
+        if (t.label && total > 0) {
+          expensesByCategory[t.label] = (expensesByCategory[t.label] || 0) + total;
         }
       });
 
       clientFinances.push({
         name: client.name,
         instagram: client.instagram,
-        received: finData.received || 0,
+        received: clientReceived,
         agreed: finData.totalAgreed || 0,
         expenses: clientExpenses,
-        profit: (finData.received || 0) - clientExpenses,
-        remaining: (finData.totalAgreed || 0) - (finData.received || 0),
+        teamCosts: clientTeamCosts,
+        profit: clientReceived - clientExpenses - clientTeamCosts,
+        remaining: (finData.totalAgreed || 0) - clientReceived,
       });
     });
 
-    const totalProfit = totalReceived - totalExpenses;
+    const allExpenses = totalExpenses + totalTeamCosts;
+    const totalProfit = totalReceived - allExpenses;
     const totalRemaining = totalAgreed - totalReceived;
 
     // New clients this month
@@ -99,7 +117,8 @@ export function AnalyticsDashboard({ clients }: Props) {
     return {
       totalReceived,
       totalAgreed,
-      totalExpenses,
+      totalExpenses: allExpenses,
+      totalTeamCosts,
       totalProfit,
       totalRemaining,
       stageCounts,
@@ -254,6 +273,7 @@ export function AnalyticsDashboard({ clients }: Props) {
                   <th>По договору</th>
                   <th>Получено</th>
                   <th>Остаток</th>
+                  <th>Команда</th>
                   <th>Расходы</th>
                   <th>Прибыль</th>
                 </tr>
@@ -271,14 +291,15 @@ export function AnalyticsDashboard({ clients }: Props) {
                     <td className={cf.remaining > 0 ? 'finance-warning' : cf.remaining === 0 && cf.agreed > 0 ? 'finance-positive' : ''}>
                       {cf.agreed > 0 ? (cf.remaining > 0 ? `${fmt(cf.remaining)} ₴` : '✅') : '—'}
                     </td>
+                    <td className={cf.teamCosts > 0 ? 'finance-negative' : ''}>{cf.teamCosts > 0 ? `${fmt(cf.teamCosts)} ₴` : '—'}</td>
                     <td className={cf.expenses > 0 ? 'finance-negative' : ''}>{cf.expenses > 0 ? `${fmt(cf.expenses)} ₴` : '—'}</td>
                     <td className={cf.profit >= 0 ? 'finance-positive' : 'finance-negative'}>
-                      {cf.received > 0 || cf.expenses > 0 ? `${cf.profit >= 0 ? '+' : ''}${fmt(cf.profit)} ₴` : '—'}
+                      {cf.received > 0 || cf.expenses > 0 || cf.teamCosts > 0 ? `${cf.profit >= 0 ? '+' : ''}${fmt(cf.profit)} ₴` : '—'}
                     </td>
                   </tr>
                 ))}
               </tbody>
-              {analytics.clientFinances.some(c => c.received > 0 || c.expenses > 0) && (
+              {analytics.clientFinances.some(c => c.received > 0 || c.expenses > 0 || c.teamCosts > 0) && (
                 <tfoot>
                   <tr>
                     <td><b>Итого</b></td>
@@ -287,7 +308,8 @@ export function AnalyticsDashboard({ clients }: Props) {
                     <td className={analytics.totalRemaining > 0 ? 'finance-warning' : 'finance-positive'}>
                       {analytics.totalRemaining > 0 ? `${fmt(analytics.totalRemaining)} ₴` : '✅'}
                     </td>
-                    <td className="finance-negative">{fmt(analytics.totalExpenses)} ₴</td>
+                    <td className="finance-negative">{fmt(analytics.totalTeamCosts)} ₴</td>
+                    <td className="finance-negative">{fmt(analytics.totalExpenses - analytics.totalTeamCosts)} ₴</td>
                     <td className={analytics.totalProfit >= 0 ? 'finance-positive' : 'finance-negative'}>
                       {analytics.totalProfit >= 0 ? '+' : ''}{fmt(analytics.totalProfit)} ₴
                     </td>

@@ -3,7 +3,7 @@
    Защищает от поломок при изменении структуры данных (добавление новых полей)
    ============================================ */
 
-const CURRENT_VERSION = 2; // Версия всей базы localStorage для проекта
+const CURRENT_VERSION = 3; // Версия всей базы localStorage для проекта
 
 interface MigrationFn {
   version: number;
@@ -25,16 +25,24 @@ const migrations: MigrationFn[] = [
       return data;
     }
   },
-  // Задел для v3
-  // {
-  //   version: 3,
-  //   migrate: (key, data) => {
-  //      if (key.startsWith('hw_formats_')) {
-  //          data.newField = true;
-  //      }
-  //      return data;
-  //   }
-  // }
+  {
+    version: 3,
+    // v2 → v3: расширяем FinanceData — добавляем payments[], teamCosts[], date к расходам
+    migrate: (key, data) => {
+      if (key.startsWith('hw_finance_') && typeof data === 'object' && !Array.isArray(data)) {
+        return {
+          ...data,
+          payments: data.payments ?? [],
+          teamCosts: data.teamCosts ?? [],
+          expenses: (data.expenses || []).map((e: any) => ({
+            ...e,
+            date: e.date ?? '',
+          })),
+        };
+      }
+      return data;
+    }
+  },
 ];
 
 // In-memory cache to avoid redundant localStorage reads for version checks

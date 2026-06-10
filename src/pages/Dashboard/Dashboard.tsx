@@ -47,6 +47,7 @@ export function Dashboard() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [editName, setEditName] = useState('');
   const [editInstagram, setEditInstagram] = useState('');
+  const [editInstagramUrl, setEditInstagramUrl] = useState('');
   const [editComment, setEditComment] = useState('');
 
 
@@ -114,6 +115,7 @@ export function Dashboard() {
     setEditingClient(client);
     setEditName(client.name);
     setEditInstagram(client.instagram);
+    setEditInstagramUrl((client.workspaceData?.[`hw_ig_url_${client.id}`] as string) || '');
     setEditComment(client.meetingSummary || '');
   };
 
@@ -136,6 +138,9 @@ export function Dashboard() {
           meetingSummary: editComment.trim() || undefined,
         },
       });
+      // Save Instagram URL to workspaceData
+      const urlKey = `hw_ig_url_${editingClient.id}`;
+      await updateWorkspaceData(editingClient.id, urlKey, editInstagramUrl.trim() || null);
       logActivity({ action_type: 'client_name_changed', client_id: editingClient.id, details: `Обновлено: ${editName.trim()} / ${editInstagram.trim()}` });
       addToast('success', 'Клиент обновлён', `Данные «${editName.trim()}» сохранены.`);
       setEditingClient(null);
@@ -423,7 +428,25 @@ export function Dashboard() {
                             ✏️
                           </button>
                         </h3>
-                        <span className="client-instagram">{client.instagram}</span>
+                        <span className="client-instagram">
+                          {(() => {
+                            const customUrl = client.workspaceData?.[`hw_ig_url_${client.id}`] as string | undefined;
+                            const username = client.instagram.replace(/^@/, '');
+                            const igUrl = customUrl || (username ? `https://instagram.com/${username}` : '');
+                            return igUrl ? (
+                              <a
+                                href={igUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="client-instagram-link"
+                                onClick={(e) => e.stopPropagation()}
+                                title="Открыть профиль Instagram"
+                              >
+                                {client.instagram}
+                              </a>
+                            ) : client.instagram;
+                          })()}
+                        </span>
                       </div>
                       <div className="client-card-top-actions" onClick={(e) => e.stopPropagation()}>
                         {/* Archive toggle */}
@@ -632,6 +655,18 @@ export function Dashboard() {
                   value={editInstagram}
                   onChange={(e) => setEditInstagram(e.target.value)}
                 />
+              </div>
+              <div className="login-field">
+                <label className="login-label" htmlFor="edit-client-ig-url">Ссылка на Instagram <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(необязательно)</span></label>
+                <input
+                  id="edit-client-ig-url"
+                  className="input"
+                  type="url"
+                  placeholder="https://instagram.com/username"
+                  value={editInstagramUrl}
+                  onChange={(e) => setEditInstagramUrl(e.target.value)}
+                />
+                <span className="field-hint">Если не указано — сформируется автоматически из @username</span>
               </div>
               <div className="login-field">
                 <label className="login-label" htmlFor="edit-client-comment">Комментарий <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(необязательно)</span></label>

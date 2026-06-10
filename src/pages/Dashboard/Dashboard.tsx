@@ -135,7 +135,7 @@ export function Dashboard() {
         updates: {
           name: editName.trim(),
           instagram: editInstagram.trim(),
-          meetingSummary: editComment.trim() || undefined,
+          meetingSummary: editComment.trim(),
         },
       });
       // Save Instagram URL to workspaceData

@@ -63,11 +63,11 @@ const migrations: MigrationFn[] = [
           })),
           teamCosts: teamCosts.map((t: Record<string, unknown>) => ({
             ...t,
-            date: (t.date && typeof t.date === 'string' && (t.date as string).length > 0) ? t.date : fallbackDate,
+            date: (t.date && typeof t.date === 'string' && t.date.length > 0) ? t.date : fallbackDate,
           })),
           payments: payments.map((p: Record<string, unknown>) => ({
             ...p,
-            date: (p.date && typeof p.date === 'string' && (p.date as string).length > 0) ? p.date : fallbackDate,
+            date: (p.date && typeof p.date === 'string' && p.date.length > 0) ? p.date : fallbackDate,
           })),
         };
       }

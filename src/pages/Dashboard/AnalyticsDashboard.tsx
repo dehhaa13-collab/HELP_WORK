@@ -1,9 +1,9 @@
 /* ============================================
-   Analytics Dashboard — Аналитика по всем клиентам
-   Финансы, воронка, статусы, активность
+   Analytics Dashboard v2 — Аналитика по всем клиентам
+   Финансы, воронка, статусы, фильтр по периоду
    ============================================ */
 
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import type { Client } from '../../types';
 import { PIPELINE_STAGES } from '../../types';
 import { computeClientStage } from '../../utils/computeStage';
@@ -16,7 +16,7 @@ interface Props {
 interface FinanceData {
   received: number;
   totalAgreed: number;
-  expenses: { id: string; name: string; amount: number }[];
+  expenses: { id: string; name: string; amount: number; date?: string }[];
   payments?: { id: string; amount: number; date: string; note: string }[];
   teamCosts?: { id: string; type: string; label: string; quantity: number; unitPrice: number; date: string; note: string }[];
 }
@@ -29,7 +29,68 @@ const FUNNEL_COLORS = [
   '#FB923C', '#FACC15', '#4ADE80',
 ];
 
+// === Period presets ===
+type PeriodKey = 'all' | 'month' | 'quarter' | 'year' | 'custom';
+
+interface PeriodRange {
+  from: string; // YYYY-MM-DD
+  to: string;
+}
+
+function getPeriodRange(key: PeriodKey, customFrom?: string, customTo?: string): PeriodRange | null {
+  if (key === 'all') return null;
+  if (key === 'custom') {
+    return { from: customFrom || '', to: customTo || '' };
+  }
+  const now = new Date();
+  const to = now.toISOString().split('T')[0];
+  let from: Date;
+  if (key === 'month') {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if (key === 'quarter') {
+    from = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+  } else {
+    // year
+    from = new Date(now.getFullYear(), 0, 1);
+  }
+  return { from: from.toISOString().split('T')[0], to };
+}
+
+function isInPeriod(dateStr: string | undefined, range: PeriodRange | null): boolean {
+  if (!range) return true; // "all" — no filter
+  if (!dateStr) return true; // no date on item — include by default
+  if (range.from && dateStr < range.from) return false;
+  if (range.to && dateStr > range.to) return false;
+  return true;
+}
+
+// Period label
+function getPeriodLabel(key: PeriodKey, range: PeriodRange | null): string {
+  if (key === 'all' || !range) return 'За всё время';
+  const fmtDate = (d: string) => {
+    try {
+      return new Date(d + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch {
+      return d;
+    }
+  };
+  if (key === 'month') return 'Текущий месяц';
+  if (key === 'quarter') return 'Квартал (3 мес.)';
+  if (key === 'year') return 'Текущий год';
+  return `${fmtDate(range.from)} — ${fmtDate(range.to)}`;
+}
+
 export function AnalyticsDashboard({ clients }: Props) {
+  // === Period filter state ===
+  const [periodKey, setPeriodKey] = useState<PeriodKey>('all');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+
+  const periodRange = useMemo(
+    () => getPeriodRange(periodKey, customFrom, customTo),
+    [periodKey, customFrom, customTo]
+  );
+
   // === Aggregate all data ===
   const analytics = useMemo(() => {
     let totalReceived = 0;
@@ -47,39 +108,58 @@ export function AnalyticsDashboard({ clients }: Props) {
       teamCosts: number;
       profit: number;
       remaining: number;
+      isArchived: boolean;
     }[] = [];
+
+    // Active / archived counts
+    let activeCount = 0;
+    let archivedCount = 0;
 
     // Initialize stage counts
     PIPELINE_STAGES.forEach(s => { stageCounts[s.key] = 0; });
 
     // Count stages
     clients.forEach(client => {
+      const isArchived = !!client.workspaceData?.[`hw_archived_${client.id}`];
+      if (isArchived) { archivedCount++; } else { activeCount++; }
+
       const stage = computeClientStage(client.id, client.workspaceData);
-      stageCounts[stage] = (stageCounts[stage] || 0) + 1;
+      if (!isArchived) {
+        stageCounts[stage] = (stageCounts[stage] || 0) + 1;
+      }
 
       // Read finance data from workspaceData
       const finKey = `hw_finance_${client.id}`;
       const finData: FinanceData = client.workspaceData?.[finKey] || { received: 0, totalAgreed: 0, expenses: [] };
-      
-      // Received: from payments[] if available, otherwise from received field
-      const paymentsSum = (finData.payments || []).reduce((s, p) => s + (p.amount || 0), 0);
-      const clientReceived = (finData.payments || []).length > 0 ? paymentsSum : (finData.received || 0);
-      
-      const clientExpenses = (finData.expenses || []).reduce((s, e) => s + (e.amount || 0), 0);
-      const clientTeamCosts = (finData.teamCosts || []).reduce((s, t) => s + ((t.quantity || 0) * (t.unitPrice || 0)), 0);
-      
+
+      // Filter payments by period
+      const filteredPayments = (finData.payments || []).filter(p => isInPeriod(p.date, periodRange));
+      const paymentsSum = filteredPayments.reduce((s, p) => s + (p.amount || 0), 0);
+
+      // If there are payments, use filtered sum. If old-style received with no payments, use received only when period is "all"
+      const hasPayments = (finData.payments || []).length > 0;
+      const clientReceived = hasPayments ? paymentsSum : (periodRange === null ? (finData.received || 0) : 0);
+
+      // Filter expenses by period
+      const filteredExpenses = (finData.expenses || []).filter(e => isInPeriod(e.date, periodRange));
+      const clientExpenses = filteredExpenses.reduce((s, e) => s + (e.amount || 0), 0);
+
+      // Filter team costs by period
+      const filteredTeamCosts = (finData.teamCosts || []).filter(t => isInPeriod(t.date, periodRange));
+      const clientTeamCosts = filteredTeamCosts.reduce((s, t) => s + ((t.quantity || 0) * (t.unitPrice || 0)), 0);
+
       totalReceived += clientReceived;
       totalAgreed += finData.totalAgreed || 0;
       totalExpenses += clientExpenses;
       totalTeamCosts += clientTeamCosts;
 
-      // Category breakdown — include both expenses and teamCosts
-      (finData.expenses || []).forEach(e => {
+      // Category breakdown — include both expenses and teamCosts (filtered)
+      filteredExpenses.forEach(e => {
         if (e.name && e.amount) {
           expensesByCategory[e.name] = (expensesByCategory[e.name] || 0) + e.amount;
         }
       });
-      (finData.teamCosts || []).forEach(t => {
+      filteredTeamCosts.forEach(t => {
         const total = (t.quantity || 0) * (t.unitPrice || 0);
         if (t.label && total > 0) {
           expensesByCategory[t.label] = (expensesByCategory[t.label] || 0) + total;
@@ -95,6 +175,7 @@ export function AnalyticsDashboard({ clients }: Props) {
         teamCosts: clientTeamCosts,
         profit: clientReceived - clientExpenses - clientTeamCosts,
         remaining: (finData.totalAgreed || 0) - clientReceived,
+        isArchived,
       });
     });
 
@@ -109,10 +190,29 @@ export function AnalyticsDashboard({ clients }: Props) {
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     });
 
+    // Clients created in period
+    const clientsInPeriod = periodRange
+      ? clients.filter(c => {
+          const d = new Date(c.createdAt).toISOString().split('T')[0];
+          return isInPeriod(d, periodRange);
+        })
+      : clients;
+
+    // Average client value
+    const clientsWithRevenue = clientFinances.filter(c => c.received > 0);
+    const avgClientValue = clientsWithRevenue.length > 0
+      ? clientsWithRevenue.reduce((s, c) => s + c.received, 0) / clientsWithRevenue.length
+      : 0;
+
     // Expense breakdown sorted desc
     const expenseBreakdown = Object.entries(expensesByCategory)
       .map(([name, amount]) => ({ name, amount }))
       .sort((a, b) => b.amount - a.amount);
+
+    // Top profitable clients
+    const topProfitable = [...clientFinances]
+      .filter(c => c.received > 0 || c.expenses > 0 || c.teamCosts > 0)
+      .sort((a, b) => b.profit - a.profit);
 
     return {
       totalReceived,
@@ -125,8 +225,13 @@ export function AnalyticsDashboard({ clients }: Props) {
       clientFinances,
       expenseBreakdown,
       newClientsCount: thisMonth.length,
+      activeCount,
+      archivedCount,
+      clientsInPeriodCount: clientsInPeriod.length,
+      avgClientValue,
+      topProfitable,
     };
-  }, [clients]);
+  }, [clients, periodRange]);
 
   const maxStageCount = Math.max(1, ...Object.values(analytics.stageCounts));
 
@@ -143,26 +248,65 @@ export function AnalyticsDashboard({ clients }: Props) {
 
   return (
     <div className="analytics-page">
-      <div>
-        <h2 className="analytics-page-title">📊 Аналитика</h2>
-        <p className="analytics-page-subtitle">
-          Сводка по всем клиентам • {new Date().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
-        </p>
+      <div className="analytics-header-row">
+        <div>
+          <h2 className="analytics-page-title">📊 Аналитика</h2>
+          <p className="analytics-page-subtitle">
+            {getPeriodLabel(periodKey, periodRange)} • {new Date().toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
+          </p>
+        </div>
       </div>
 
-      {/* === KPI Cards === */}
+      {/* === Period Selector === */}
+      <div className="analytics-period-bar">
+        <span className="analytics-period-label">Период:</span>
+        <div className="analytics-period-pills">
+          {([
+            { key: 'all', label: 'Всё время' },
+            { key: 'month', label: 'Месяц' },
+            { key: 'quarter', label: 'Квартал' },
+            { key: 'year', label: 'Год' },
+            { key: 'custom', label: 'Свой' },
+          ] as { key: PeriodKey; label: string }[]).map(p => (
+            <button
+              key={p.key}
+              className={`analytics-period-pill ${periodKey === p.key ? 'analytics-period-pill-active' : ''}`}
+              onClick={() => setPeriodKey(p.key)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        {periodKey === 'custom' && (
+          <div className="analytics-period-custom">
+            <input
+              type="date"
+              className="input analytics-period-date"
+              value={customFrom}
+              onChange={e => setCustomFrom(e.target.value)}
+              placeholder="С"
+            />
+            <span className="analytics-period-dash">—</span>
+            <input
+              type="date"
+              className="input analytics-period-date"
+              value={customTo}
+              onChange={e => setCustomTo(e.target.value)}
+              placeholder="По"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* === KPI Cards (6 cards — 2 rows of 3) === */}
       <div className="analytics-kpi-row">
         <div className="analytics-kpi card">
           <div className="card-body">
             <span className="analytics-kpi-emoji">👥</span>
-            <span className="analytics-kpi-value">
-              {clients.filter(c => !c.workspaceData?.[`hw_archived_${c.id}`]).length}
-            </span>
+            <span className="analytics-kpi-value">{analytics.activeCount}</span>
             <span className="analytics-kpi-label">Активных клиентов</span>
-            {clients.filter(c => !!c.workspaceData?.[`hw_archived_${c.id}`]).length > 0 && (
-              <span className="analytics-kpi-sub">
-                🗃️ {clients.filter(c => !!c.workspaceData?.[`hw_archived_${c.id}`]).length} завершённых
-              </span>
+            {analytics.archivedCount > 0 && (
+              <span className="analytics-kpi-sub">🗃️ {analytics.archivedCount} завершённых</span>
             )}
             {analytics.newClientsCount > 0 && (
               <span className="analytics-kpi-sub" style={{ color: 'var(--color-success)' }}>
@@ -191,7 +335,10 @@ export function AnalyticsDashboard({ clients }: Props) {
             <span className="analytics-kpi-value" style={{ color: 'var(--color-danger)' }}>
               {fmt(analytics.totalExpenses)} ₴
             </span>
-            <span className="analytics-kpi-label">Расходы</span>
+            <span className="analytics-kpi-label">Все расходы</span>
+            <span className="analytics-kpi-sub">
+              👥 {fmt(analytics.totalTeamCosts)} команда / 📊 {fmt(analytics.totalExpenses - analytics.totalTeamCosts)} прочие
+            </span>
           </div>
         </div>
         <div className="analytics-kpi card">
@@ -208,9 +355,35 @@ export function AnalyticsDashboard({ clients }: Props) {
             )}
           </div>
         </div>
+        <div className="analytics-kpi card">
+          <div className="card-body">
+            <span className="analytics-kpi-emoji">💎</span>
+            <span className="analytics-kpi-value" style={{ color: 'var(--color-primary)' }}>
+              {fmt(Math.round(analytics.avgClientValue))} ₴
+            </span>
+            <span className="analytics-kpi-label">Средний чек</span>
+            <span className="analytics-kpi-sub">
+              {analytics.topProfitable.filter(c => c.received > 0).length} клиентов с оплатой
+            </span>
+          </div>
+        </div>
+        <div className="analytics-kpi card">
+          <div className="card-body">
+            <span className="analytics-kpi-emoji">📋</span>
+            <span className="analytics-kpi-value" style={{ color: 'var(--color-primary)' }}>
+              {fmt(analytics.totalAgreed)} ₴
+            </span>
+            <span className="analytics-kpi-label">По договорам</span>
+            {analytics.totalAgreed > 0 && analytics.totalReceived > 0 && (
+              <span className="analytics-kpi-sub">
+                Оплачено {Math.round((analytics.totalReceived / analytics.totalAgreed) * 100)}%
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* === Two Column: Funnel + Finance === */}
+      {/* === Two Column: Funnel + Expenses === */}
       <div className="analytics-two-col">
         {/* Funnel */}
         <div className="analytics-section">
@@ -251,12 +424,21 @@ export function AnalyticsDashboard({ clients }: Props) {
             <div className="card-body">
               {analytics.expenseBreakdown.length > 0 ? (
                 <div className="analytics-expense-list">
-                  {analytics.expenseBreakdown.map((item) => (
-                    <div key={item.name} className="analytics-expense-item">
-                      <span className="analytics-expense-name">{item.name}</span>
-                      <span className="analytics-expense-value">{fmt(item.amount)} ₴</span>
-                    </div>
-                  ))}
+                  {analytics.expenseBreakdown.map((item) => {
+                    const pct = analytics.totalExpenses > 0 ? (item.amount / analytics.totalExpenses) * 100 : 0;
+                    return (
+                      <div key={item.name} className="analytics-expense-item">
+                        <div className="analytics-expense-info">
+                          <span className="analytics-expense-name">{item.name}</span>
+                          <span className="analytics-expense-pct">{Math.round(pct)}%</span>
+                        </div>
+                        <div className="analytics-expense-bar-track">
+                          <div className="analytics-expense-bar-fill" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="analytics-expense-value">{fmt(item.amount)} ₴</span>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', padding: 'var(--space-6) 0' }}>
@@ -267,6 +449,34 @@ export function AnalyticsDashboard({ clients }: Props) {
           </div>
         </div>
       </div>
+
+      {/* === Top Clients === */}
+      {analytics.topProfitable.length > 0 && (
+        <div className="analytics-section">
+          <h3 className="analytics-section-title">🏆 Топ клиентов по прибыли</h3>
+          <div className="analytics-top-clients">
+            {analytics.topProfitable.slice(0, 5).map((cf, i) => (
+              <div key={cf.instagram} className="analytics-top-client card">
+                <div className="card-body">
+                  <span className="analytics-top-rank">{i + 1}</span>
+                  <div className="analytics-top-info">
+                    <span className="analytics-top-name">{cf.name}</span>
+                    <span className="analytics-top-instagram">{cf.instagram}</span>
+                  </div>
+                  <div className="analytics-top-numbers">
+                    <span className={cf.profit >= 0 ? 'finance-value-positive' : 'finance-value-negative'}>
+                      {cf.profit >= 0 ? '+' : ''}{fmt(cf.profit)} ₴
+                    </span>
+                    <span className="analytics-top-received">
+                      из {fmt(cf.received)} ₴
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* === Finance Table === */}
       <div className="analytics-section">
@@ -286,10 +496,13 @@ export function AnalyticsDashboard({ clients }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {analytics.clientFinances.map((cf) => (
-                  <tr key={cf.instagram}>
+                {analytics.clientFinances
+                  .filter(cf => cf.received > 0 || cf.expenses > 0 || cf.teamCosts > 0 || cf.agreed > 0)
+                  .map((cf) => (
+                  <tr key={cf.instagram} className={cf.isArchived ? 'analytics-row-archived' : ''}>
                     <td>
                       <span className="finance-client-name">{cf.name}</span>
+                      {cf.isArchived && <span className="analytics-archived-badge">🗃️</span>}
                       <br />
                       <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{cf.instagram}</span>
                     </td>
@@ -338,11 +551,14 @@ export function AnalyticsDashboard({ clients }: Props) {
                 .slice()
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .map(client => {
+                  const isArchived = !!client.workspaceData?.[`hw_archived_${client.id}`];
                   const stage = computeClientStage(client.id, client.workspaceData);
                   const stageInfo = PIPELINE_STAGES.find(s => s.key === stage);
                   return (
-                    <div key={client.id} className="analytics-timeline-row">
-                      <span className="analytics-timeline-name">{client.name}</span>
+                    <div key={client.id} className={`analytics-timeline-row ${isArchived ? 'analytics-row-archived' : ''}`}>
+                      <span className="analytics-timeline-name">
+                        {client.name} {isArchived && <span className="analytics-archived-badge">🗃️</span>}
+                      </span>
                       <span className="analytics-timeline-date">
                         {new Date(client.createdAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
                       </span>

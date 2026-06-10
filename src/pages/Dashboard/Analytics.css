@@ -1,5 +1,5 @@
 /* ============================================
-   Analytics Dashboard — CSS
+   Analytics Dashboard v2 — CSS
    Полноценная аналитика по всем клиентам
    ============================================ */
 
@@ -57,6 +57,13 @@
   margin: 0 auto;
 }
 
+.analytics-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
 .analytics-page-title {
   font-size: var(--font-size-2xl);
   font-weight: 800;
@@ -70,10 +77,70 @@
   margin-top: var(--space-1);
 }
 
+/* Period Selector */
+.analytics-period-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.analytics-period-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.analytics-period-pills {
+  display: flex;
+  gap: var(--space-1);
+  background: var(--color-bg);
+  border-radius: var(--radius-full);
+  padding: 3px;
+  border: 1px solid var(--color-border);
+}
+
+.analytics-period-pill {
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.analytics-period-pill:hover {
+  color: var(--color-primary);
+}
+
+.analytics-period-pill-active {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.analytics-period-custom {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.analytics-period-date {
+  max-width: 150px;
+  font-size: var(--font-size-xs) !important;
+}
+
+.analytics-period-dash {
+  color: var(--color-text-muted);
+}
+
 /* KPI Row */
 .analytics-kpi-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-4);
 }
 
@@ -114,6 +181,14 @@
   font-size: 11px;
   color: var(--color-text-muted);
   margin-top: var(--space-1);
+}
+
+.finance-value-positive {
+  color: var(--color-success);
+}
+
+.finance-value-negative {
+  color: var(--color-danger);
 }
 
 /* Section */
@@ -182,6 +257,152 @@
   color: var(--color-text);
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* Expense breakdown — enhanced with bars */
+.analytics-expense-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.analytics-expense-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.analytics-expense-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.analytics-expense-name {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.analytics-expense-pct {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.analytics-expense-bar-track {
+  height: 8px;
+  background: var(--color-bg);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.analytics-expense-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, var(--color-danger), #f87171);
+  transition: width 0.4s ease;
+  min-width: 2px;
+}
+
+.analytics-expense-value {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-danger);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Top Clients */
+.analytics-top-clients {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+
+.analytics-top-client .card-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.analytics-top-rank {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.analytics-top-client:nth-child(1) .analytics-top-rank {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #fff;
+}
+
+.analytics-top-client:nth-child(2) .analytics-top-rank {
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+  color: #fff;
+}
+
+.analytics-top-client:nth-child(3) .analytics-top-rank {
+  background: linear-gradient(135deg, #cd7f32, #a0522d);
+  color: #fff;
+}
+
+.analytics-top-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.analytics-top-name {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-top-instagram {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.analytics-top-numbers {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.analytics-top-numbers > span:first-child {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-top-received {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+/* Archived row */
+.analytics-row-archived {
+  opacity: 0.5;
+}
+
+.analytics-archived-badge {
+  font-size: 12px;
+  margin-left: 4px;
 }
 
 /* Finance Table */
@@ -293,34 +514,6 @@
   text-align: right;
 }
 
-/* Expense breakdown */
-.analytics-expense-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.analytics-expense-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
-}
-
-.analytics-expense-name {
-  font-size: var(--font-size-sm);
-  color: var(--color-text);
-}
-
-.analytics-expense-value {
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  color: var(--color-danger);
-  font-variant-numeric: tabular-nums;
-}
-
 /* Responsive */
 @media (max-width: 768px) {
   .dash-tab-switcher {
@@ -334,6 +527,26 @@
 
   .analytics-page-title {
     font-size: var(--font-size-lg);
+  }
+
+  .analytics-period-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .analytics-period-pills {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .analytics-period-custom {
+    width: 100%;
+  }
+
+  .analytics-period-date {
+    flex: 1;
+    max-width: none;
   }
 
   .analytics-kpi-row {
@@ -378,6 +591,11 @@
 
   .analytics-section-title {
     font-size: var(--font-size-base);
+  }
+
+  /* Top clients */
+  .analytics-top-clients {
+    grid-template-columns: 1fr;
   }
 
   /* Scrollable finance table on mobile */

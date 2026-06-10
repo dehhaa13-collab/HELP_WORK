@@ -7,6 +7,7 @@ import { useState, useMemo } from 'react';
 import type { Client } from '../../types';
 import { PIPELINE_STAGES } from '../../types';
 import { computeClientStage } from '../../utils/computeStage';
+import { exportFinanceSummaryCSV } from '../../utils/exportUtils';
 import './Analytics.css';
 
 interface Props {
@@ -480,7 +481,16 @@ export function AnalyticsDashboard({ clients }: Props) {
 
       {/* === Finance Table === */}
       <div className="analytics-section">
-        <h3 className="analytics-section-title">💵 Финансы по клиентам</h3>
+        <div className="analytics-section-header">
+          <h3 className="analytics-section-title">💵 Финансы по клиентам</h3>
+          <button
+            className="analytics-export-btn"
+            onClick={() => exportFinanceSummaryCSV(analytics.clientFinances)}
+            title="Скачать CSV"
+          >
+            📥 Экспорт CSV
+          </button>
+        </div>
         <div className="card">
           <div className="card-body" style={{ overflowX: 'auto' }}>
             <table className="analytics-finance-table">

@@ -5,6 +5,8 @@
 
 import { useState } from 'react';
 import { usePersistedState } from '../../../utils/usePersistedState';
+import { exportClientFinanceCSV } from '../../../utils/exportUtils';
+import { useClients } from '../../../hooks/useClients';
 import './FinanceTab.css';
 
 interface Props {
@@ -89,6 +91,7 @@ function sortByDate<T extends { date: string }>(arr: T[], dir: SortDir): T[] {
 // === Компонент ===
 
 export function FinanceTab({ clientId }: Props) {
+  const { data: clients } = useClients();
   const [finance, setFinance] = usePersistedState<FinanceData>(
     `hw_finance_${clientId}`,
     DEFAULT_FINANCE
@@ -557,6 +560,17 @@ export function FinanceTab({ clientId }: Props) {
                 </span>
               </div>
             </div>
+            <button
+              className="analytics-export-btn"
+              style={{ marginTop: 'var(--space-4)' }}
+              onClick={() => {
+                const clientData = (clients || []).find(c => c.id === clientId);
+                const name = clientData?.name || 'Клиент';
+                exportClientFinanceCSV(name, finance.payments, finance.teamCosts, finance.expenses);
+              }}
+            >
+              📥 Экспорт финансов CSV
+            </button>
           </div>
         </div>
       )}

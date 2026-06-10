@@ -265,3 +265,133 @@ export function exportContentPlanCSV(
   saveAs(blob, `Контент-план.csv`);
 }
 
+// =======================================
+// CSV EXPORT — Финансы: сводка по всем клиентам
+// =======================================
+
+interface ClientFinanceSummary {
+  name: string;
+  instagram: string;
+  agreed: number;
+  received: number;
+  remaining: number;
+  teamCosts: number;
+  expenses: number;
+  profit: number;
+}
+
+export function exportFinanceSummaryCSV(clients: ClientFinanceSummary[]) {
+  if (clients.length === 0) return;
+
+  const rows: string[][] = [
+    ['Клиент', 'Instagram', 'По договору', 'Получено', 'Остаток', 'Команда', 'Прочие расходы', 'Прибыль'],
+  ];
+
+  let totalAgreed = 0, totalReceived = 0, totalRemaining = 0;
+  let totalTeam = 0, totalExpenses = 0, totalProfit = 0;
+
+  clients.forEach(c => {
+    rows.push([
+      c.name,
+      c.instagram,
+      String(c.agreed),
+      String(c.received),
+      String(c.remaining),
+      String(c.teamCosts),
+      String(c.expenses),
+      String(c.profit),
+    ]);
+    totalAgreed += c.agreed;
+    totalReceived += c.received;
+    totalRemaining += c.remaining;
+    totalTeam += c.teamCosts;
+    totalExpenses += c.expenses;
+    totalProfit += c.profit;
+  });
+
+  rows.push([
+    'ИТОГО', '',
+    String(totalAgreed), String(totalReceived), String(totalRemaining),
+    String(totalTeam), String(totalExpenses), String(totalProfit),
+  ]);
+
+  const csvContent = rows.map(row =>
+    row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')
+  ).join('\n');
+
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+  saveAs(blob, `Финансы_сводка_${new Date().toISOString().slice(0, 10)}.csv`);
+}
+
+// =======================================
+// CSV EXPORT — Финансы: детальный по одному клиенту
+// =======================================
+
+interface PaymentItem { amount: number; date: string; note: string }
+interface TeamCostItem { label: string; quantity: number; unitPrice: number; date: string }
+interface ExpenseItem { name: string; amount: number; date?: string }
+
+export function exportClientFinanceCSV(
+  clientName: string,
+  payments: PaymentItem[],
+  teamCosts: TeamCostItem[],
+  expenses: ExpenseItem[],
+) {
+  const rows: string[][] = [];
+
+  // Header
+  rows.push([`Финансы: ${clientName}`, '', '', '', '']);
+  rows.push([`Дата экспорта: ${new Date().toLocaleDateString('ru-RU')}`, '', '', '', '']);
+  rows.push([]);
+
+  // Payments
+  rows.push(['=== ОПЛАТЫ ===', '', '', '', '']);
+  rows.push(['Дата', 'Сумма', 'Заметка', '', '']);
+  let totalPayments = 0;
+  payments.forEach(p => {
+    rows.push([p.date || '—', String(p.amount), p.note || '', '', '']);
+    totalPayments += p.amount;
+  });
+  rows.push(['Итого оплат:', String(totalPayments), '', '', '']);
+  rows.push([]);
+
+  // Team costs
+  rows.push(['=== РАСХОДЫ НА КОМАНДУ ===', '', '', '', '']);
+  rows.push(['Статья', 'Кол-во', 'Ставка', 'Итого', 'Дата']);
+  let totalTeam = 0;
+  teamCosts.forEach(t => {
+    const total = t.quantity * t.unitPrice;
+    rows.push([t.label, String(t.quantity), String(t.unitPrice), String(total), t.date || '—']);
+    totalTeam += total;
+  });
+  rows.push(['Итого команда:', '', '', String(totalTeam), '']);
+  rows.push([]);
+
+  // Expenses
+  rows.push(['=== ПРОЧИЕ РАСХОДЫ ===', '', '', '', '']);
+  rows.push(['Название', 'Сумма', 'Дата', '', '']);
+  let totalExp = 0;
+  expenses.forEach(e => {
+    rows.push([e.name, String(e.amount), e.date || '—', '', '']);
+    totalExp += e.amount;
+  });
+  rows.push(['Итого расходы:', String(totalExp), '', '', '']);
+  rows.push([]);
+
+  // Summary
+  rows.push(['=== СВОДКА ===', '', '', '', '']);
+  rows.push(['Получено', String(totalPayments), '', '', '']);
+  rows.push(['Все расходы', String(totalTeam + totalExp), '', '', '']);
+  rows.push(['Прибыль', String(totalPayments - totalTeam - totalExp), '', '', '']);
+
+  const csvContent = rows.map(row =>
+    row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')
+  ).join('\n');
+
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const safeName = clientName.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_');
+  saveAs(blob, `Финансы_${safeName}_${new Date().toISOString().slice(0, 10)}.csv`);
+}
+

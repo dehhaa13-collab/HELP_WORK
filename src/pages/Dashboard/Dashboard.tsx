@@ -43,9 +43,11 @@ export function Dashboard() {
   const [showArchived, setShowArchived] = useState(false);
   const isAdmin = user?.role === 'admin';
 
-  // Inline editing
-  const [editingClientId, setEditingClientId] = useState<string | null>(null);
+  // Edit modal
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [editName, setEditName] = useState('');
+  const [editInstagram, setEditInstagram] = useState('');
+  const [editComment, setEditComment] = useState('');
 
 
   // Escape to close modals
@@ -53,7 +55,7 @@ export function Dashboard() {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setShowAddModal(false);
-        setEditingClientId(null);
+        setEditingClient(null);
         setClientToDelete(null);
       }
     };
@@ -106,23 +108,37 @@ export function Dashboard() {
 
   // Этапы теперь вычисляются автоматически из прогресса по вкладкам
 
-  // === Inline name editing ===
-  const startEditName = (e: React.MouseEvent, client: Client) => {
+  // === Edit client modal ===
+  const openEditModal = (e: React.MouseEvent, client: Client) => {
     e.stopPropagation();
-    setEditingClientId(client.id);
+    setEditingClient(client);
     setEditName(client.name);
+    setEditInstagram(client.instagram);
+    setEditComment(client.meetingSummary || '');
   };
 
-  const saveEditName = async (clientId: string) => {
+  const saveEditClient = async () => {
+    if (!editingClient) return;
     if (!editName.trim()) {
       addToast('warning', 'Имя не может быть пустым', 'Введите имя клиента.');
       return;
     }
+    if (!editInstagram.trim()) {
+      addToast('warning', 'Instagram не может быть пустым', 'Введите Instagram-аккаунт.');
+      return;
+    }
     try {
-      await updateClient({ id: clientId, updates: { name: editName.trim() } });
-      logActivity({ action_type: 'client_name_changed', client_id: clientId, details: `Новое имя: ${editName.trim()}` });
-      addToast('success', 'Имя обновлено', `Имя клиента изменено на «${editName.trim()}».`);
-      setEditingClientId(null);
+      await updateClient({
+        id: editingClient.id,
+        updates: {
+          name: editName.trim(),
+          instagram: editInstagram.trim(),
+          meetingSummary: editComment.trim() || undefined,
+        },
+      });
+      logActivity({ action_type: 'client_name_changed', client_id: editingClient.id, details: `Обновлено: ${editName.trim()} / ${editInstagram.trim()}` });
+      addToast('success', 'Клиент обновлён', `Данные «${editName.trim()}» сохранены.`);
+      setEditingClient(null);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Неизвестная ошибка';
       addToast('error', 'Ошибка обновления', errMsg);
@@ -369,7 +385,6 @@ export function Dashboard() {
               const total = PIPELINE_STAGES.length;
               const progress = ((index) / (total - 1)) * 100;
               const isDone = manualStageKey === 'done';
-              const isEditing = editingClientId === client.id;
               const isArchived = !!client.workspaceData?.[`hw_archived_${client.id}`];
 
               // Idle tracking — reads cloud-synced stageRecord from workspaceData
@@ -382,8 +397,8 @@ export function Dashboard() {
                 <div
                   key={client.id}
                   className={`client-card card ${isArchived ? 'client-card-archived' : ''}`}
-                  onClick={() => { if (!isEditing) selectClient(client.id); }}
-                  onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !isEditing) { e.preventDefault(); selectClient(client.id); } }}
+                  onClick={() => selectClient(client.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectClient(client.id); } }}
                   role="button"
                   tabIndex={0}
                 >
@@ -398,28 +413,16 @@ export function Dashboard() {
                         {client.name.charAt(0).toUpperCase()}
                       </div>
                       <div className="client-info">
-                        {isEditing ? (
-                          <div className="client-edit-name" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              className="input client-edit-input"
-                              type="text"
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveEditName(client.id); } if (e.key === 'Escape') setEditingClientId(null); }}
-                              autoFocus
-                            />
-                            <button className="btn btn-primary btn-sm" onClick={() => saveEditName(client.id)}>✓</button>
-                            <button className="btn btn-ghost btn-sm" onClick={() => setEditingClientId(null)}>✕</button>
-                          </div>
-                        ) : (
-                          <h3
-                            className="client-name client-name-editable"
-                            onClick={(e) => startEditName(e, client)}
-                            title="Нажмите, чтобы изменить имя"
+                        <h3 className="client-name">
+                          {client.name}
+                          <button
+                            className="btn btn-ghost btn-sm edit-icon-btn"
+                            onClick={(e) => openEditModal(e, client)}
+                            title="Редактировать клиента"
                           >
-                            {client.name} <span className="edit-icon">✏️</span>
-                          </h3>
-                        )}
+                            ✏️
+                          </button>
+                        </h3>
                         <span className="client-instagram">{client.instagram}</span>
                       </div>
                       <div className="client-card-top-actions" onClick={(e) => e.stopPropagation()}>
@@ -593,6 +596,58 @@ export function Dashboard() {
               <button className="btn btn-primary" onClick={handleAddClient} disabled={isAddingClient}>
                 {isAddingClient ? '...' : 'Добавить'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Client Modal */}
+      {editingClient && (
+        <div className="modal-overlay" onClick={() => setEditingClient(null)}>
+          <div className="modal card" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement)) { e.preventDefault(); saveEditClient(); } }}>
+            <div className="modal-header">
+              <h2>Редактировать клиента</h2>
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditingClient(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="login-field">
+                <label className="login-label" htmlFor="edit-client-name">Имя клиента</label>
+                <input
+                  id="edit-client-name"
+                  className="input"
+                  type="text"
+                  placeholder="Например: Анна Иванова"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="login-field">
+                <label className="login-label" htmlFor="edit-client-ig">Instagram</label>
+                <input
+                  id="edit-client-ig"
+                  className="input"
+                  type="text"
+                  placeholder="@username"
+                  value={editInstagram}
+                  onChange={(e) => setEditInstagram(e.target.value)}
+                />
+              </div>
+              <div className="login-field">
+                <label className="login-label" htmlFor="edit-client-comment">Комментарий <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(необязательно)</span></label>
+                <textarea
+                  id="edit-client-comment"
+                  className="input textarea"
+                  placeholder="Заметки после встречи, особенности клиента..."
+                  value={editComment}
+                  onChange={(e) => setEditComment(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setEditingClient(null)}>Отмена</button>
+              <button className="btn btn-primary" onClick={saveEditClient}>Сохранить</button>
             </div>
           </div>
         </div>

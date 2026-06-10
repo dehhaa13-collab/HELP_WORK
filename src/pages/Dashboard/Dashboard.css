@@ -981,38 +981,35 @@
 }
 
 
-/* === Inline Name Editing === */
-.client-name-editable {
-  cursor: pointer;
+/* === Edit Icon Button on Card === */
+.client-name {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
 }
 
-.client-name-editable .edit-icon {
+.edit-icon-btn {
   font-size: var(--font-size-xs);
   opacity: 0;
-  transition: opacity var(--transition-fast);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  padding: 2px 4px;
+  line-height: 1;
 }
 
-.client-card:hover .client-name-editable .edit-icon {
+.client-card:hover .edit-icon-btn {
   opacity: 0.5;
 }
 
-.client-name-editable:hover .edit-icon {
+.edit-icon-btn:hover {
   opacity: 1 !important;
+  transform: scale(1.15);
 }
 
-.client-edit-name {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.client-edit-input {
-  width: 140px;
-  padding: var(--space-1) var(--space-2);
-  font-size: var(--font-size-sm);
+/* Always show edit icon on touch devices */
+@media (max-width: 768px) {
+  .edit-icon-btn {
+    opacity: 0.6;
+  }
 }
 
 /* === Stage Navigation Buttons === */

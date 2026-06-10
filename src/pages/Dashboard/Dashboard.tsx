@@ -145,7 +145,7 @@ export function Dashboard() {
   useEffect(() => {
     clients.forEach(client => {
       const stageKey = `hw_stage_record_${client.id}`;
-      const currentRecord: StageRecord | null = client.workspaceData?.[stageKey] || null;
+      const currentRecord = (client.workspaceData?.[stageKey] as StageRecord | undefined) || null;
       const currentStage = client.pipelineStage || 'new';
 
       if (!currentRecord) {
@@ -373,7 +373,7 @@ export function Dashboard() {
               const isArchived = !!client.workspaceData?.[`hw_archived_${client.id}`];
 
               // Idle tracking — reads cloud-synced stageRecord from workspaceData
-              const stageRecord: StageRecord | null = client.workspaceData?.[`hw_stage_record_${client.id}`] || null;
+              const stageRecord = (client.workspaceData?.[`hw_stage_record_${client.id}`] as StageRecord | undefined) || null;
               const daysIdle = getDaysOnCurrentStage(stageRecord, client.createdAt);
               const idleLevel = getIdleLevel(daysIdle);
               const idleHint = getIdleHint(daysIdle);

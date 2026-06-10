@@ -131,7 +131,7 @@ export function AnalyticsDashboard({ clients }: Props) {
 
       // Read finance data from workspaceData
       const finKey = `hw_finance_${client.id}`;
-      const finData: FinanceData = client.workspaceData?.[finKey] || { received: 0, totalAgreed: 0, expenses: [] };
+      const finData = (client.workspaceData?.[finKey] as FinanceData | undefined) || { received: 0, totalAgreed: 0, expenses: [] as FinanceData['expenses'] };
 
       // Filter payments by period
       const filteredPayments = (finData.payments || []).filter(p => isInPeriod(p.date, periodRange));

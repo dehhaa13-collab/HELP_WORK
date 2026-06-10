@@ -42,10 +42,10 @@ export function usePersistedState<T>(key: string, defaultValue: T): [T, React.Di
       const client = clients?.find((c: Client) => c.id === selectedClientId);
       cv = client?.workspaceData?.[key];
     }
-    if (cv !== undefined) return migrateData(key, cv);
+    if (cv !== undefined) return migrateData(key, cv) as T;
     try {
       const saved = localStorage.getItem(key);
-      if (saved !== null) return migrateData(key, JSON.parse(saved));
+      if (saved !== null) return migrateData(key, JSON.parse(saved)) as T;
     } catch { /* ignore */ }
     return defaultRef.current;
   });
@@ -59,7 +59,7 @@ export function usePersistedState<T>(key: string, defaultValue: T): [T, React.Di
     if (initialCV !== undefined) {
       const initialStr = JSON.stringify(initialCV);
       prevCloudStrRef.current = initialStr;
-      const migrated = migrateData(key, initialCV);
+      const migrated = migrateData(key, initialCV) as T;
       const migratedStr = JSON.stringify(migrated);
       setValueRaw(current => JSON.stringify(current) !== migratedStr ? migrated : current);
     }
@@ -72,7 +72,7 @@ export function usePersistedState<T>(key: string, defaultValue: T): [T, React.Di
 
       if (cvStr && cvStr !== prevCloudStrRef.current) {
         prevCloudStrRef.current = cvStr;
-        const migrated = migrateData(key, cv);
+        const migrated = migrateData(key, cv) as T;
         const migratedStr = JSON.stringify(migrated);
         setValueRaw(current => JSON.stringify(current) !== migratedStr ? migrated : current);
       }

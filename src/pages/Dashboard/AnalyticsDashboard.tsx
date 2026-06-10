@@ -155,8 +155,15 @@ export function AnalyticsDashboard({ clients }: Props) {
         <div className="analytics-kpi card">
           <div className="card-body">
             <span className="analytics-kpi-emoji">👥</span>
-            <span className="analytics-kpi-value">{clients.length}</span>
-            <span className="analytics-kpi-label">Всего клиентов</span>
+            <span className="analytics-kpi-value">
+              {clients.filter(c => !c.workspaceData?.[`hw_archived_${c.id}`]).length}
+            </span>
+            <span className="analytics-kpi-label">Активных клиентов</span>
+            {clients.filter(c => !!c.workspaceData?.[`hw_archived_${c.id}`]).length > 0 && (
+              <span className="analytics-kpi-sub">
+                🗃️ {clients.filter(c => !!c.workspaceData?.[`hw_archived_${c.id}`]).length} завершённых
+              </span>
+            )}
             {analytics.newClientsCount > 0 && (
               <span className="analytics-kpi-sub" style={{ color: 'var(--color-success)' }}>
                 +{analytics.newClientsCount} в этом месяце

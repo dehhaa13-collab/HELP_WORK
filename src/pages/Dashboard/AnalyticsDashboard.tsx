@@ -59,7 +59,7 @@ function getPeriodRange(key: PeriodKey, customFrom?: string, customTo?: string):
 
 function isInPeriod(dateStr: string | undefined, range: PeriodRange | null): boolean {
   if (!range) return true; // "all" — no filter
-  if (!dateStr) return true; // no date on item — include by default
+  if (!dateStr) return false; // no date on item — exclude when filtering by period
   if (range.from && dateStr < range.from) return false;
   if (range.to && dateStr > range.to) return false;
   return true;

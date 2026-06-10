@@ -3,7 +3,7 @@
    Защищает от поломок при изменении структуры данных (добавление новых полей)
    ============================================ */
 
-const CURRENT_VERSION = 3; // Версия всей базы localStorage для проекта
+const CURRENT_VERSION = 4; // Версия всей базы localStorage для проекта
 
 interface MigrationFn {
   version: number;
@@ -39,6 +39,35 @@ const migrations: MigrationFn[] = [
           expenses: expenses.map((e: Record<string, unknown>) => ({
             ...e,
             date: e.date ?? '',
+          })),
+        };
+      }
+      return data;
+    }
+  },
+  {
+    version: 4,
+    // v3 → v4: backfill пустых дат в expenses и teamCosts (для корректной фильтрации по периоду)
+    migrate: (key, data) => {
+      if (key.startsWith('hw_finance_') && typeof data === 'object' && data !== null && !Array.isArray(data)) {
+        const d = data as Record<string, unknown>;
+        const fallbackDate = new Date().toISOString().split('T')[0]; // сегодня
+        const expenses = Array.isArray(d.expenses) ? d.expenses : [];
+        const teamCosts = Array.isArray(d.teamCosts) ? d.teamCosts : [];
+        const payments = Array.isArray(d.payments) ? d.payments : [];
+        return {
+          ...d,
+          expenses: expenses.map((e: Record<string, unknown>) => ({
+            ...e,
+            date: (e.date && typeof e.date === 'string' && e.date.length > 0) ? e.date : fallbackDate,
+          })),
+          teamCosts: teamCosts.map((t: Record<string, unknown>) => ({
+            ...t,
+            date: (t.date && typeof t.date === 'string' && (t.date as string).length > 0) ? t.date : fallbackDate,
+          })),
+          payments: payments.map((p: Record<string, unknown>) => ({
+            ...p,
+            date: (p.date && typeof p.date === 'string' && (p.date as string).length > 0) ? p.date : fallbackDate,
           })),
         };
       }

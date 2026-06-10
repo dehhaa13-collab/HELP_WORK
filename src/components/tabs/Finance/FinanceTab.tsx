@@ -62,7 +62,6 @@ const TEAM_COST_PRESETS = [
   { type: 'producer',         label: '👨‍💼 Продюсер',                defaultPrice: 2000 },
   { type: 'cover_design',     label: '🎨 Создание обложек',        defaultPrice: 0    },
   { type: 'acquisition',      label: '📢 Стоимость привлечения',   defaultPrice: 0    },
-  { type: 'content_shooting', label: '📸 Съёмка контента',         defaultPrice: 0    },
 ];
 
 const EXPENSE_PRESETS = [

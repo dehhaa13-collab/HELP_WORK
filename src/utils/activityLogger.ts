@@ -32,7 +32,7 @@ interface LogEntry {
   client_name?: string;
   client_id?: string;
   details?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Track whether the table exists to avoid repeated 404s

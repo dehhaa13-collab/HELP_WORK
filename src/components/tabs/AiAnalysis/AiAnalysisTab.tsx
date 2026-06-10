@@ -184,6 +184,7 @@ export function AiAnalysisTab({ clientId }: Props) {
 
     document.addEventListener('paste', handlePaste);
     return () => document.removeEventListener('paste', handlePaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAnalyze = async () => {
@@ -322,7 +323,7 @@ export function AiAnalysisTab({ clientId }: Props) {
         <div className="card-body">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '8px' }}>
             <h3 className="ai-section-title" style={{ margin: 0 }}>📸 Скриншот профиля</h3>
-            {!!result.aiSummary && (
+            {result.aiSummary && (
               <span style={{ 
                 backgroundColor: 'rgba(34, 197, 94, 0.1)', 
                 color: '#16a34a', 
@@ -340,7 +341,7 @@ export function AiAnalysisTab({ clientId }: Props) {
             )}
           </div>
           <p className="ai-section-desc">
-            {!!result.aiSummary 
+            {result.aiSummary 
               ? 'Анализ для этого клиента уже был сделан (результаты сохранены). Загрузите новый скриншот, чтобы обновить анализ.' 
               : 'Загрузите скриншот Instagram-страницы клиента для AI-анализа.'}
           </p>

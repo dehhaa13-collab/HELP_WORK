@@ -14,7 +14,7 @@ interface ActivityLogEntry {
   action_type: string;
   client_name: string | null;
   details: string | null;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export function ActivityLog() {
@@ -51,8 +51,8 @@ export function ActivityLog() {
       });
       setLogs(result.logs);
       setTotal(result.total);
-    } catch (err: any) {
-      if (err?.message === 'TABLE_NOT_FOUND') {
+    } catch (err) {
+      if (err instanceof Error && err.message === 'TABLE_NOT_FOUND') {
         setTableExists(false);
       } else {
         console.error('[ActivityLog] Failed to fetch:', err);

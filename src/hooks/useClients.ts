@@ -15,7 +15,7 @@ const mapDbToClient = (row: Record<string, unknown>): Client => ({
   instagram: row.instagram as string,
   pipelineStage: (row.pipeline_stage as PipelineStage) || 'new',
   meetingSummary: (row.meeting_summary as string) || undefined,
-  workspaceData: typeof row.workspace_data === 'object' && row.workspace_data ? row.workspace_data as Record<string, any> : {},
+  workspaceData: typeof row.workspace_data === 'object' && row.workspace_data ? row.workspace_data as Record<string, unknown> : {},
   createdAt: row.created_at as string,
   updatedAt: row.updated_at as string,
 });
@@ -25,7 +25,7 @@ const mapDbToClient = (row: Record<string, unknown>): Client => ({
 // FIX #1: beforeunload flush to prevent data loss
 // ============================================
 const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
-const pendingFlushData = new Map<string, Record<string, any>>();
+const pendingFlushData = new Map<string, Record<string, unknown>>();
 
 /**
  * Flush all pending workspace saves to Supabase.
@@ -230,7 +230,7 @@ export function useUpdateClient() {
 export function useUpdateWorkspaceData() {
   const queryClient = useQueryClient();
 
-  return useCallback((id: string, key: string, data: any) => {
+  return useCallback((id: string, key: string, data: unknown) => {
     // 1. Оптимистично обновляем кеш React Query (мгновенный UI)
     queryClient.setQueryData(['clients'], (oldClients: Client[] | undefined) => {
       if (!oldClients) return oldClients;

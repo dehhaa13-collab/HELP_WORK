@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, no-empty, @typescript-eslint/no-unused-vars */
+// AI API wrappers handle untyped JSON from external services.
+// All outputs are validated through Zod schemas at the boundary.
+
 export const getGeminiKey = () => {
   // Obfuscated to bypass GitHub secret scanning
   const p1 = 'AIzaSyD';

@@ -7,7 +7,7 @@ const CURRENT_VERSION = 3; // Версия всей базы localStorage для
 
 interface MigrationFn {
   version: number;
-  migrate: (key: string, data: any) => any;
+  migrate: (key: string, data: unknown) => unknown;
 }
 
 const migrations: MigrationFn[] = [
@@ -17,7 +17,7 @@ const migrations: MigrationFn[] = [
     migrate: (key, data) => {
       // Ищем данные вкладки "Таргет" (они хранятся массивом TargetItem)
       if (key.startsWith('hw_targeting_') && Array.isArray(data)) {
-        return data.map(item => ({
+        return data.map((item: Record<string, unknown>) => ({
           ...item,
           name: item.name ?? '', // Если name нет, ставим пустую строку
         }));
@@ -29,12 +29,14 @@ const migrations: MigrationFn[] = [
     version: 3,
     // v2 → v3: расширяем FinanceData — добавляем payments[], teamCosts[], date к расходам
     migrate: (key, data) => {
-      if (key.startsWith('hw_finance_') && typeof data === 'object' && !Array.isArray(data)) {
+      if (key.startsWith('hw_finance_') && typeof data === 'object' && data !== null && !Array.isArray(data)) {
+        const d = data as Record<string, unknown>;
+        const expenses = Array.isArray(d.expenses) ? d.expenses : [];
         return {
-          ...data,
-          payments: data.payments ?? [],
-          teamCosts: data.teamCosts ?? [],
-          expenses: (data.expenses || []).map((e: any) => ({
+          ...d,
+          payments: d.payments ?? [],
+          teamCosts: d.teamCosts ?? [],
+          expenses: expenses.map((e: Record<string, unknown>) => ({
             ...e,
             date: e.date ?? '',
           })),
@@ -52,7 +54,7 @@ const versionCache = new Map<string, number>();
  * Проверяет текущую версию данных и последовательно натравливает функции миграции,
  * пока не дойдет до CURRENT_VERSION.
  */
-export function migrateData(key: string, rawData: any): any {
+export function migrateData(key: string, rawData: unknown): unknown {
   if (rawData === null || rawData === undefined) return rawData;
   if (typeof rawData !== 'object') return rawData;
 
@@ -73,7 +75,7 @@ export function migrateData(key: string, rawData: any): any {
     return rawData;
   }
 
-  let data = rawData;
+  let data: unknown = rawData;
   
   for (const m of migrations) {
     if (m.version > currentVer) {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import type { PipelineStage } from '../../types';
 import { useAuthStore, useClientStore, useToastStore } from '../../store';
 import { useClients, useAddClient, useUpdateClient, useRemoveClient, useUpdateWorkspaceData } from '../../hooks/useClients';
@@ -47,19 +47,19 @@ export function Dashboard() {
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
 
-  // Escape to close modal
-  const handleEscape = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      if (showAddModal) setShowAddModal(false);
-      if (editingClientId) setEditingClientId(null);
-      if (clientToDelete) setClientToDelete(null);
-    }
-  }, [showAddModal, editingClientId, clientToDelete]);
 
+  // Escape to close modals
   useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowAddModal(false);
+        setEditingClientId(null);
+        setClientToDelete(null);
+      }
+    };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [handleEscape]);
+  }, []);
 
   // === Add client (with optional comment) ===
   const handleAddClient = async () => {

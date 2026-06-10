@@ -22,7 +22,7 @@ import type { PipelineStage } from '../types';
 /**
  * Вычисляет текущий этап клиента на основе заполненности вкладок.
  */
-export function computeClientStage(clientId: string, workspaceData?: Record<string, any>): PipelineStage {
+export function computeClientStage(clientId: string, workspaceData?: Record<string, unknown>): PipelineStage {
   // --- Универсальный геттер: облако → localStorage → default ---
   const get = <T>(key: string, fallback: T): T => {
     try {

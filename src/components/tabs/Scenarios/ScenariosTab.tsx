@@ -123,9 +123,10 @@ export function ScenariosTab({ clientId }: Props) {
       
       setCompetitors(responseText.trim());
       addToast('success', 'Анализ завершен', 'ИИ просканировал тренды в сети.');
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      addToast('error', 'Ошибка поиска', error?.message || 'Не удалось связаться с поисковиком.');
+      const errMsg = error instanceof Error ? error.message : 'Не удалось связаться с поисковиком.';
+      addToast('error', 'Ошибка поиска', errMsg);
     } finally {
       setIsGeneratingCompetitors(false);
     }

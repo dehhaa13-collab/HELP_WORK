@@ -186,7 +186,7 @@ export function TaskManager({ clients }: Props) {
                 </button>
                 <button
                   type="button"
-                  className={`task-quick-btn ${newDeadline === new Date(Date.now() + 86400000).toISOString().split('T')[0] ? 'active' : ''}`}
+                  className="task-quick-btn"
                   onClick={() => setNewDeadline(new Date(Date.now() + 86400000).toISOString().split('T')[0])}
                 >
                   Завтра

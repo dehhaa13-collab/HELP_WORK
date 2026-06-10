@@ -19,10 +19,12 @@ export function usePersistedState<T>(key: string, defaultValue: T): [T, React.Di
   // Stable ref for update function
   const updateWorkspaceData = useUpdateWorkspaceData();
   const updateRef = useRef(updateWorkspaceData);
-  updateRef.current = updateWorkspaceData;
+
+  // Sync refs via effect (React Compiler compliant)
+  useEffect(() => { updateRef.current = updateWorkspaceData; }, [updateWorkspaceData]);
 
   // Read cloud value directly from cache — NO subscription!
-  const readCloudValue = useCallback((): any => {
+  const readCloudValue = useCallback((): unknown => {
     if (!selectedClientId) return undefined;
     const clients = queryClient.getQueryData<Client[]>(['clients']);
     if (!clients) return undefined;
@@ -31,8 +33,15 @@ export function usePersistedState<T>(key: string, defaultValue: T): [T, React.Di
   }, [queryClient, selectedClientId, key]);
 
   // Initialize from cloud → localStorage → default
+  // eslint-disable-next-line react-hooks/refs
   const [value, setValueRaw] = useState<T>(() => {
-    const cv = readCloudValue();
+    // Read initial cloud value inline (not via ref)
+    let cv: unknown;
+    if (selectedClientId) {
+      const clients = queryClient.getQueryData<Client[]>(['clients']);
+      const client = clients?.find((c: Client) => c.id === selectedClientId);
+      cv = client?.workspaceData?.[key];
+    }
     if (cv !== undefined) return migrateData(key, cv);
     try {
       const saved = localStorage.getItem(key);
@@ -72,11 +81,12 @@ export function usePersistedState<T>(key: string, defaultValue: T): [T, React.Di
     return unsubscribe;
   }, [key, readCloudValue, queryClient]);
 
-  // Stable refs for setter
+  // Stable refs for setter — synced via effects (React Compiler compliant)
   const selectedClientIdRef = useRef(selectedClientId);
-  selectedClientIdRef.current = selectedClientId;
   const keyRef = useRef(key);
-  keyRef.current = key;
+
+  useEffect(() => { selectedClientIdRef.current = selectedClientId; }, [selectedClientId]);
+  useEffect(() => { keyRef.current = key; }, [key]);
 
   // Setter: local state → localStorage → Supabase (debounced)
   const setValue = useCallback<React.Dispatch<React.SetStateAction<T>>>((action) => {

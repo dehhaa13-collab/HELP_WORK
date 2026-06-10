@@ -508,6 +508,12 @@ export function AnalyticsDashboard({ clients }: Props) {
               <tbody>
                 {analytics.clientFinances
                   .filter(cf => cf.received > 0 || cf.expenses > 0 || cf.teamCosts > 0 || cf.agreed > 0)
+                  .sort((a, b) => {
+                    // Active first, archived last
+                    if (a.isArchived !== b.isArchived) return a.isArchived ? 1 : -1;
+                    // Within group: by profit descending
+                    return b.profit - a.profit;
+                  })
                   .map((cf) => (
                   <tr key={cf.instagram} className={cf.isArchived ? 'analytics-row-archived' : ''}>
                     <td>

@@ -431,21 +431,54 @@
     display: none;
   }
 
-  /* Team table mobile */
+  /* Team table mobile — card layout for full editing */
   .finance-team-header {
-    grid-template-columns: 1fr 60px 80px 40px;
+    display: none;
   }
 
   .finance-team-row {
-    grid-template-columns: 1fr 60px 80px 40px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    position: relative;
   }
 
-  /* Hide ставка, дата on mobile for team */
-  .finance-team-header span:nth-child(3),
-  .finance-team-header span:nth-child(5),
-  .finance-team-row .finance-input-wrapper,
+  .finance-team-row .finance-team-label {
+    width: 100%;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    margin-bottom: var(--space-1);
+    padding-right: 36px; /* space for delete btn */
+  }
+
+  .finance-team-row .finance-num-input {
+    width: 60px;
+    flex-shrink: 0;
+  }
+
+  .finance-team-row .finance-input-wrapper {
+    display: flex;
+    flex: 1;
+    min-width: 80px;
+  }
+
+  .finance-team-row .finance-team-total {
+    flex-shrink: 0;
+    padding: 6px 0;
+  }
+
   .finance-team-row .finance-date-input {
-    display: none;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin-top: var(--space-1);
+  }
+
+  .finance-team-row .finance-remove-btn {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
   }
 
   /* Expense table mobile */

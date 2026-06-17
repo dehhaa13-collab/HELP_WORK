@@ -133,6 +133,30 @@
   font-size: var(--font-size-xs);
 }
 
+/* Subsection labels */
+.finance-subsection-label {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.finance-subsection-desc {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-3) 0;
+  line-height: 1.4;
+}
+
+.finance-subsection-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: var(--space-4) 0;
+}
+
 /* Input helpers */
 .finance-field-label {
   font-size: var(--font-size-sm);

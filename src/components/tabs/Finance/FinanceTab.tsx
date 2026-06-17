@@ -303,6 +303,9 @@ export function FinanceTab({ clientId }: Props) {
           </div>
 
           {/* Таблица оплат */}
+          <div className="finance-subsection-divider" />
+          <div className="finance-subsection-label">💸 Фактически полученные оплаты</div>
+          <p className="finance-subsection-desc">Реальные поступления от клиента — предоплаты, доплаты, траншы.</p>
           <div className="finance-table-section">
             <div className="finance-table-header finance-payment-header">
               <span>Дата</span>

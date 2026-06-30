@@ -73,7 +73,11 @@ const EXPENSE_PRESETS = [
 const formatMoney = (n: number) =>
   n.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-const today = () => new Date().toISOString().split('T')[0];
+const today = () => {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().split('T')[0];
+};
 
 
 type SortDir = 'newest' | 'oldest';
@@ -330,7 +334,11 @@ export function FinanceTab({ clientId }: Props) {
                     value={p.amount || ''}
                     onChange={e => {
                       const num = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0;
-                      updatePayment(p.id, { amount: num });
+                      if (!p.amount && num > 0) {
+                        updatePayment(p.id, { amount: num, date: today() });
+                      } else {
+                        updatePayment(p.id, { amount: num });
+                      }
                     }}
                   />
                 </div>
@@ -402,7 +410,11 @@ export function FinanceTab({ clientId }: Props) {
                       value={t.unitPrice || ''}
                       onChange={e => {
                         const num = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0;
-                        updateTeamCost(t.id, { unitPrice: num });
+                        if (!t.unitPrice && num > 0) {
+                          updateTeamCost(t.id, { unitPrice: num, date: today() });
+                        } else {
+                          updateTeamCost(t.id, { unitPrice: num });
+                        }
                       }}
                     />
                   </div>
@@ -487,7 +499,11 @@ export function FinanceTab({ clientId }: Props) {
                     value={expense.amount || ''}
                     onChange={e => {
                       const num = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0;
-                      updateExpense(expense.id, { amount: num });
+                      if (!expense.amount && num > 0) {
+                        updateExpense(expense.id, { amount: num, date: today() });
+                      } else {
+                        updateExpense(expense.id, { amount: num });
+                      }
                     }}
                   />
                 </div>

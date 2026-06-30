@@ -6,7 +6,7 @@
 import { useState, useMemo } from 'react';
 import type { Client } from '../../types';
 import { PIPELINE_STAGES } from '../../types';
-import { computeClientStage } from '../../utils/computeStage';
+
 import { exportFinanceSummaryCSV } from '../../utils/exportUtils';
 import './Analytics.css';
 
@@ -124,7 +124,7 @@ export function AnalyticsDashboard({ clients }: Props) {
       const isArchived = !!client.workspaceData?.[`hw_archived_${client.id}`];
       if (isArchived) { archivedCount++; } else { activeCount++; }
 
-      const stage = computeClientStage(client.id, client.workspaceData);
+      const stage = client.pipelineStage || 'new';
       if (!isArchived) {
         stageCounts[stage] = (stageCounts[stage] || 0) + 1;
       }
@@ -568,7 +568,7 @@ export function AnalyticsDashboard({ clients }: Props) {
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .map(client => {
                   const isArchived = !!client.workspaceData?.[`hw_archived_${client.id}`];
-                  const stage = computeClientStage(client.id, client.workspaceData);
+                  const stage = client.pipelineStage || 'new';
                   const stageInfo = PIPELINE_STAGES.find(s => s.key === stage);
                   return (
                     <div key={client.id} className={`analytics-timeline-row ${isArchived ? 'analytics-row-archived' : ''}`}>
